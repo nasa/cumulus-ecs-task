@@ -70,7 +70,10 @@ function downloadLambdaHandler (arn, dir, callback) {
 }
 
 /**
+* Polls for work for the given activity arn
 *
+* @param  {string} activityArn - the lambda activity arn
+* @return {object} - eventEmitter emits `data` and `error` events
 **/
 function pollForWork (activityArn) {
   const emitter = new EventEmitter();
@@ -86,7 +89,12 @@ function pollForWork (activityArn) {
 }
 
 /**
+* Start the Lambda handler as a service
 *
+* @param {object} options - options object
+* @param {string} options.lambdaArn - the arn of the lambda handler
+* @param {string} options.activityArn - the arn of the activity
+* @param {string} options.directory - the directory to put the lambda zip file in
 **/
 function runService (options, callback) {
   assert(options && typeof options === 'object', 'options.lambdaArn string is required');
