@@ -1,0 +1,33 @@
+{
+  "name": "@cumulus/cumulus-ecs-task",
+  "version": "1.0.0",
+  "description": "Run lambda functions in ECS",
+  "main": "index.js",
+  "bin": {
+    "cumulus-ecs-task": "index.js"
+  },
+  "keywords": [
+    "CUMULUS",
+    "GIBS",
+    "NASA"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git@github.com:cumulus-nasa/cumulus-ecs-task.git"
+  },
+  "license": "Apache-2.0",
+  "dependencies": {
+    "aws-sdk": "^2.203.0",
+    "cliclopts": "^1.1.1",
+    "lodash": "^4.17.5",
+    "minimist": "^1.2.0",
+    "rimraf": "^2.6.2"
+  },
+  "scripts": {
+    "docker:build": "docker build -t cumulus-ecs-task .",
+    "docker:push": "docker push cumuluss/cumulus-ecs-task",
+    "docker:deploy": "npm run docker:build && npm run docker:push",
+    "docker:clean": "docker rm -v $(docker ps -a -q -f status=exited); docker rmi $(docker images -f \"dangling=true\" -q); true"
+  },
+  "devDependencies": {}
+}

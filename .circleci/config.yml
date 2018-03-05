@@ -1,0 +1,13 @@
+version: 2
+jobs:
+  build:
+    docker:
+      - image: docker:17.12.1-ce
+    working_directory: ~/ecs-lambda-runner
+    steps:
+      - checkout
+      - setup_remote_docker
+      - run: |
+          docker build -t developmentseed/cumulus:lambda-runner .
+          docker login -u scisco -p $DOCKER_PASSWORD
+          docker push developmentseed/cumulus:lambda-runner
