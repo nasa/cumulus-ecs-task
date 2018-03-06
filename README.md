@@ -27,25 +27,26 @@ docker run -e AWS_ACCESS_KEY_ID='<aws-access-key>' \
   -e AWS_SECRET_ACCESS_KEY='<aws-secret-key>' \
   cumuluss/cumulus-ecs-task \
   --activityArn <activity-arn> \
-  --lambdaArn <lambda-arn> \
+  --lambdaArn <lambda-arn>
 ```
 
-To deploy to the AWS repo:
+## Create a release
+
+Bump the version
 
 ```
-export AWS_ACCOUNT_ID=<your-account-id>
-docker tag cumulus-ecs-task:latest $AWS_ACCOUNT_ID.dkr.ecr.us-east-1.amazonaws.com/cumulus-ecs-task:latest
-docker push $AWS_ACCOUNT_ID.dkr.ecr.us-east-1.amazonaws.com/cumulus-ecs-task:latest
-
+npm version <major|minor|patch|specific version>
 ```
 
-To clean up local deployments after repeated builds:
+Create the build
 
 ```
-npm run docker:clean
+./bin/build.sh
 ```
 
 ## Contributing
+
+See the [CONTRIBUTING.md](CONTRIBUTING.md) file.
 
 ## License
 [Apache-2.0](LICENSE)

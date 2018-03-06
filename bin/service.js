@@ -1,4 +1,7 @@
+#!/usr/bin/env node
+
 const fs = require('fs');
+const path = require('path');
 
 const minimist = require('minimist');
 const createCliOptions = require('cliclopts');
@@ -6,42 +9,52 @@ const rimraf = require('rimraf');
 
 const runService = require('../index');
 
-const dir = path.join(process.cwd(), 'tmp');
+const taskDir = path.join(process.cwd(), 'task');
+const workDir = path.join(process.cwd(), '.tmp-work');
 
 var cliOptions = createCliOptions([
   {
     name: 'directory',
     abbr: 'd',
-    default: dir,
-    help: 'path to temporary directory'
+    alias: ['taskDirectory'],
+    default: taskDir,
+    help: 'path to task directory'
   },
   {
-    name: 'event',
-    abbr: 'e',
-    help: 'JSON string of an AWS Lambda event'
+    name: 'work-directory',
+    abbr: 'w',
+    alias: ['workDirectory'],
+    default: workDir,
+    help: 'path to temporary working directory'
   },
   {
-    name: 'context',
-    abbr: 'c',
-    help: 'JSON string of an AWS Lambda context'
-  },
-  {
-    name: 'lambdaArn',
+    name: 'lambda-arn',
     abbr: 'l',
+    alias: ['lambdaArn'],
     help: 'the arn of the lambda function that will run on ecs'
   },
   {
-    name: 'activityArn',
+    name: 'activity-arn',
     abbr: 'a',
+    alias: ['activityArn'],
     help: 'the arn of the step function activity for this task'
   }
 ]);
 
 var argv = minimist(process.argv.slice(2), cliOptions.options());
+console.log('argv', argv);
 
-rimraf.sync(dir);
-fs.mkdirSync(dir);
+rimraf.sync(argv.taskDirectory);
+rimraf.sync(argv.workDirectory);
 
-// get args
-// runService(dir, args)
-process.on('exit', () => rimraf.sync(dir));
+fs.mkdirSync(argv.taskDirectory);
+fs.mkdirSync(argv.workDirectory);
+
+runService(argv, function (err) {
+  if (err) {
+    console.log(err);
+    process.exit(1);
+  }
+});
+
+process.on('exit', () => rimraf.sync(argv.workDirectory));

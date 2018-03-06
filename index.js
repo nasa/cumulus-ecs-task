@@ -20,14 +20,14 @@ const sf = new AWS.StepFunctions({ apiVersion: '2016-11-23' });
 * Download the zip file of a lambda function from AWS
 *
 * @param {string} arn - the arn of the lambda function
-* @param {strind} dir – the dir to download the lambda function to
+* @param {strind} workDir – the dir to download the lambda function to
 * @param {function} callback - callback function with `err`, `filepath`, `moduleFileName`,
 * and `moduleFunctionName` arguments.
 * The `filepath` is the path to the zip file of the lambda function.
 * The `moduleFileName` is the filename of the node module.
 * The `moduleFunctionName` is the name of the exported function to call in the module.
 **/
-function getLambdaZip (arn, dir, callback) {
+function getLambdaZip (arn, workDir, callback) {
   const lambda = new AWS.Lambda({ apiVersion: '2015-03-31' });
 
   lambda.getFunction({ FunctionName: arn }, function (err, data) {
@@ -39,10 +39,10 @@ function getLambdaZip (arn, dir, callback) {
     const moduleFileName = moduleFn[0];
     const moduleFunctionName = moduleFn[1];
 
-    const filepath = path.join(dir, 'fn.zip');
+    const filepath = path.join(workDir, 'fn.zip');
     const file = fs.createWriteStream(filepath);
 
-    file.on('error' callback);
+    file.on('error', callback);
     file.on('finish', () => file.close());
     file.on('close', () => callback(null, filepath, moduleFileName, moduleFunctionName));
 
@@ -58,13 +58,13 @@ function getLambdaZip (arn, dir, callback) {
 * @param {function} callback - callback function with `err`, `handler` arguments
 * the `handler` is the javascript function that will run in the ECS service
 **/
-function downloadLambdaHandler (arn, dir, callback) {
-  return getLambdaZip(arn, dir, function (err, filepath, moduleFileName, moduleFunctionName) {
+function downloadLambdaHandler (arn, workDir, taskDir, callback) {
+  return getLambdaZip(arn, workDir, function (err, filepath, moduleFileName, moduleFunctionName) {
     if (err) return callback(err);
 
-    // TODO: consider making the target dir configurable
-    execSync('unzip -o ' + filepath + ' -d ./');
-    const task = require(`./${moduleFileName}`); //eslint-disable-line global-require
+    // TODO: consider making the target dir of `task` configurable
+    execSync(`unzip -o ${filepath} -d ${taskDir}`);
+    const task = require(`${taskDir}/${moduleFileName}`); //eslint-disable-line global-require
     callback(null, task[moduleFunctionName]);
   })
 }
@@ -94,19 +94,22 @@ function pollForWork (activityArn) {
 * @param {object} options - options object
 * @param {string} options.lambdaArn - the arn of the lambda handler
 * @param {string} options.activityArn - the arn of the activity
-* @param {string} options.directory - the directory to put the lambda zip file in
+* @param {string} options.taskDirectory - the directory to put the unzipped lambda zip
+* @param {string} options.workDirectory - the directory to use for downloading the lambda zip file
 **/
 function runService (options, callback) {
   assert(options && typeof options === 'object', 'options.lambdaArn string is required');
   assert(options.lambdaArn && typeof options.lambdaArn === 'string', 'options.lambdaArn string is required');
   assert(options.activityArn && typeof options.activityArn === 'string', 'options.activityArn string is required');
-  assert(options.directory && typeof options.directory === 'string', 'options.directory string is required');
+  assert(options.taskDirectory && typeof options.taskDirectory === 'string', 'options.taskDirectory string is required');
+  assert(options.workDirectory && typeof options.workDirectory === 'string', 'options.workDirectory string is required');
 
   const lambdaArn = options.lambdaArn;
   const activityArn = options.activityArn;
-  const dir = options.directory;
-
-  downloadLambdaHandler(arn, dir, function (err, handler) {
+  const taskDir = options.taskDirectory;
+  const workDir = options.workDirectory;
+  
+  downloadLambdaHandler(lambdaArn, workDir, taskDir, function (err, handler) {
     if (err) return callback(err)
 
     const work = pollForWork(activityArn);
@@ -114,24 +117,27 @@ function runService (options, callback) {
 
     work.on('data', function (data) {
       console.log('data', data)
-      const token = data.token;
-      const input = JSON.parse(data.input);
-      const event = input.event;
-      const context = input.context;
 
-      handler(event, context, function (err, output) {
-        if (err) {
-          return sf.sendTaskFailure({
+      if (data.token && data.input) {
+        const token = data.token;
+        const input = JSON.parse(data.input);
+        const event = input.event;
+        const context = input.context;
+
+        handler(event, context, function (err, output) {
+          if (err) {
+            return sf.sendTaskFailure({
+              taskToken: token,
+              error: err.toString()
+            })
+          }
+
+          sf.sendTaskSuccess({
             taskToken: token,
-            error: err.toString()
-          })
-        }
-
-        sf.sendTaskSuccess({
-          taskToken: token,
-          output: output
+            output: output
+          });
         });
-      });
+      }
     });
   });
 }

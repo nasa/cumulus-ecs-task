@@ -1,6 +1,6 @@
 {
   "name": "@cumulus/cumulus-ecs-task",
-  "version": "1.0.0",
+  "version": "0.0.1",
   "description": "Run lambda functions in ECS",
   "main": "index.js",
   "bin": {
@@ -19,6 +19,7 @@
   "dependencies": {
     "aws-sdk": "^2.203.0",
     "cliclopts": "^1.1.1",
+    "jsonfilter": "^1.1.2",
     "lodash": "^4.17.5",
     "minimist": "^1.2.0",
     "rimraf": "^2.6.2"

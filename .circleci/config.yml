@@ -10,4 +10,4 @@ jobs:
       - run: |
           docker build -t cumuluss/cumulus-ecs-task .
           docker login -u cumulususer -p $DOCKER_PASSWORD
-          docker push cumuluss/cumulus-ecs-task
+          ./bin/release.sh
