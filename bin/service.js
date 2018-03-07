@@ -42,7 +42,6 @@ var cliOptions = createCliOptions([
 ]);
 
 var argv = minimist(process.argv.slice(2), cliOptions.options());
-console.log('argv', argv);
 
 rimraf.sync(argv.taskDirectory);
 rimraf.sync(argv.workDirectory);

@@ -61,8 +61,7 @@ function getLambdaZip (arn, workDir, callback) {
 function downloadLambdaHandler (arn, workDir, taskDir, callback) {
   return getLambdaZip(arn, workDir, function (err, filepath, moduleFileName, moduleFunctionName) {
     if (err) return callback(err);
-
-    // TODO: consider making the target dir of `task` configurable
+  
     execSync(`unzip -o ${filepath} -d ${taskDir}`);
     const task = require(`${taskDir}/${moduleFileName}`); //eslint-disable-line global-require
     callback(null, task[moduleFunctionName]);
@@ -80,12 +79,28 @@ function pollForWork (activityArn) {
 
   const interval = setInterval(function () {
     sf.getActivityTask({ activityArn: activityArn }, function (err, data) {
+      console.log('getActivityTask response', err, data)
       if (err) return emitter.emit('error', err);
       emitter.emit('data', data);
     });
   }, 500);
 
   return emitter
+}
+
+/**
+* Starts heartbeat to indicate worker is working on the task
+*
+* @param  {string} token - the task token
+**/
+function startHeartbeat (token) {
+  return setInterval(function () {
+    sf.sendTaskHeartbeat({ taskToken: token }, function (err, data) {
+      if (err) {
+        console.log('error sending heartbeat', err);
+      }
+    }, 60000);
+  });
 }
 
 /**
@@ -108,6 +123,8 @@ function runService (options, callback) {
   const activityArn = options.activityArn;
   const taskDir = options.taskDirectory;
   const workDir = options.workDirectory;
+
+  process.env.CUMULUS_MESSAGE_ADAPTER_DIR=`${taskDir}/cumulus-message-adapter/`
   
   downloadLambdaHandler(lambdaArn, workDir, taskDir, function (err, handler) {
     if (err) return callback(err)
@@ -116,25 +133,31 @@ function runService (options, callback) {
     work.on('error', callback);
 
     work.on('data', function (data) {
-      console.log('data', data)
 
-      if (data.token && data.input) {
-        const token = data.token;
-        const input = JSON.parse(data.input);
-        const event = input.event;
-        const context = input.context;
+      if (data.taskToken && data.input) {
+        const token = data.taskToken;
+        const event = JSON.parse(data.input);
+        const context = { via: 'ECS' };
+
+        const heartbeat = startHeartbeat(token);
 
         handler(event, context, function (err, output) {
+          clearInterval(heartbeat);
+
           if (err) {
             return sf.sendTaskFailure({
               taskToken: token,
               error: err.toString()
+            }, function(err, data) {
+              console.log('sendTaskFailure response', err.stack, data)
             })
           }
 
           sf.sendTaskSuccess({
             taskToken: token,
-            output: output
+            output: JSON.stringify(output)
+          }, function(err, data) {
+            console.log('sendTaskSuccess response', err.stack, data)
           });
         });
       }
