@@ -10,3 +10,4 @@ cache-invalidation/config/runtime_config.json
 .env
 cumulus-message-adapter
 task
+.tmp-work
