@@ -12,7 +12,7 @@ const runService = require('../index');
 const taskDir = path.join(process.cwd(), 'task');
 const workDir = path.join(process.cwd(), '.tmp-work');
 
-var cliOptions = createCliOptions([
+const cliOptions = createCliOptions([
   {
     name: 'directory',
     abbr: 'd',
@@ -38,10 +38,16 @@ var cliOptions = createCliOptions([
     abbr: 'a',
     alias: ['activityArn'],
     help: 'the arn of the step function activity for this task'
+  },
+  {
+    name: 'heartbeat',
+    abbr: 'h',
+    help: 'interval in milliseconds between sending heartbeat messages to the state machine. ' +
+    'default is null, which disables the heartbeat'
   }
 ]);
 
-var argv = minimist(process.argv.slice(2), cliOptions.options());
+const argv = minimist(process.argv.slice(2), cliOptions.options());
 
 rimraf.sync(argv.taskDirectory);
 rimraf.sync(argv.workDirectory);
@@ -49,11 +55,6 @@ rimraf.sync(argv.workDirectory);
 fs.mkdirSync(argv.taskDirectory);
 fs.mkdirSync(argv.workDirectory);
 
-runService(argv, function (err) {
-  if (err) {
-    console.log(err);
-    process.exit(1);
-  }
-});
+runService(argv);
 
 process.on('exit', () => rimraf.sync(argv.workDirectory));
