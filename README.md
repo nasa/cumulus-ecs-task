@@ -10,9 +10,7 @@ When included in a Cumulus workflow and deployed to AWS, it will download a spec
 
 ## Compatibility
 
-TODO: update when new cumulus release goes out with cumulus-message-adapter-js version bump
-
-This only works with Node.js Lmabda functions.
+This only works with Node.js Lmabda functions, and requires that the Lambda function it is running has a dependency of at least v1.0.1 of [cumulus-message-adapter-js](https://github.com/cumulus-nasa/cumulus-message-adapter-js).
 
 ## Usage
 
