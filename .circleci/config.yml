@@ -1,4 +1,5 @@
 version: 2
+
 jobs:
   build:
     docker:
@@ -11,3 +12,12 @@ jobs:
           docker build -t cumuluss/cumulus-ecs-task .
           docker login -u cumulususer -p $DOCKER_PASSWORD
           ./bin/release.sh
+
+workflows:
+  version: 2
+  build_release:
+    jobs:
+      - build
+          # filters:
+          #   branches:
+          #     only: master
