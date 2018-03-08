@@ -3,13 +3,13 @@ version: 2
 jobs:
   build:
     docker:
-      - image: docker:17.12.0-ce
+      - image: circleci/node:6
     working_directory: ~/cumulus-ecs-task
     steps:
       - checkout
       - setup_remote_docker
       - run: |
-          npm install jsonfilter
+          npm install
           docker build -t cumuluss/cumulus-ecs-task .
           docker login -u cumulususer -p $DOCKER_PASSWORD
           ./bin/release.sh
@@ -22,4 +22,3 @@ workflows:
           # filters:
           #   branches:
           #     only: master
-
