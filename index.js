@@ -60,14 +60,13 @@ function getLambdaZip(arn, workDir, callback) {
 * @returns {undefined} - callback is used instead of return value
 **/
 function downloadLambdaHandler(lambdaArn, workDir, taskDir, callback) {
-  // return getLambdaZip(lambdaArn, workDir, (err, filepath, moduleFileName, moduleFunctionName) => {
-  //   if (err) return callback(err);
-  //
-  //   execSync(`unzip -o ${filepath} -d ${taskDir}`);
-  //   const task = require(`${taskDir}/${moduleFileName}`); //eslint-disable-line global-require
-  //   return callback(null, task[moduleFunctionName]);
-  // });
-  return callback(null, require('./task/index').handler);
+  return getLambdaZip(lambdaArn, workDir, (err, filepath, moduleFileName, moduleFunctionName) => {
+    if (err) return callback(err);
+  
+    execSync(`unzip -o ${filepath} -d ${taskDir}`);
+    const task = require(`${taskDir}/${moduleFileName}`); //eslint-disable-line global-require
+    return callback(null, task[moduleFunctionName]);
+  });
 }
 
 /**
