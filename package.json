@@ -1,6 +1,6 @@
 {
   "name": "@cumulus/cumulus-ecs-task",
-  "version": "0.0.1",
+  "version": "1.0.0-alpha1",
   "description": "Run lambda functions in ECS",
   "main": "index.js",
   "bin": {
