@@ -18,6 +18,6 @@ workflows:
   build_release:
     jobs:
       - release
-          # filters:
-          #   branches:
-          #     only: master
+          filters:
+            branches:
+              only: master
