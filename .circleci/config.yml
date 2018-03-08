@@ -9,6 +9,7 @@ jobs:
       - checkout
       - setup_remote_docker
       - run: |
+          npm install jsonfilter
           docker build -t cumuluss/cumulus-ecs-task .
           docker login -u cumulususer -p $DOCKER_PASSWORD
           ./bin/release.sh
