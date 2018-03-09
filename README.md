@@ -73,7 +73,7 @@ yourdeployment:
       username: cumulususer
     services:
       EcsTaskHelloWorld:
-        image: cumuluss/cumulus-ecs-task:0.0.1
+        image: cumuluss/cumulus-ecs-task:1.0.0
         cpu: 800
         memory: 1500
         count: 0
@@ -93,6 +93,14 @@ yourdeployment:
   activities:
     - name: EcsTaskHelloWorld
 ```
+
+Make sure the version on this line:
+
+```
+image: cumuluss/cumulus-ecs-task:1.0.0
+```
+
+Is the latest version available on [Docker Hub](https://hub.docker.com/r/cumuluss/cumulus-ecs-task/tags/).
 
 Under `activities` we define the activity name `EcsTaskHelloWorld`, which can then be referenced to in the `ecs` section and in workflows.yml as `EcsTaskHelloWorldActivity`.
 
