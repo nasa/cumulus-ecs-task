@@ -1,0 +1,23 @@
+version: 2
+
+jobs:
+  release:
+    docker:
+      - image: circleci/node:6
+    working_directory: ~/project
+    steps:
+      - checkout
+      - setup_remote_docker
+      - run: |
+          echo "//registry.npmjs.org/:_authToken=${NPM_TOKEN}" > ~/.npmrc
+          npm install
+          ./bin/release.sh
+
+workflows:
+  version: 2
+  build_release:
+    jobs:
+      - release:
+          filters:
+            branches:
+              only: master
