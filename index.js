@@ -62,7 +62,7 @@ function getLambdaZip(arn, workDir, callback) {
 function downloadLambdaHandler(lambdaArn, workDir, taskDir, callback) {
   return getLambdaZip(lambdaArn, workDir, (err, filepath, moduleFileName, moduleFunctionName) => {
     if (err) return callback(err);
-  
+
     execSync(`unzip -o ${filepath} -d ${taskDir}`);
     const task = require(`${taskDir}/${moduleFileName}`); //eslint-disable-line global-require
     return callback(null, task[moduleFunctionName]);
@@ -89,13 +89,14 @@ function startHeartbeat(taskToken) {
 * Tells workflow that the task has failed
 *
 * @param {string} taskToken - the task token
-* @param {Object} taskError - the error
+* @param {Object} taskError - the error object returned by the handler
 * @returns {undefined} - no return value
 **/
 function sendTaskFailure(taskToken, taskError) {
   sf.sendTaskFailure({
     taskToken: taskToken,
-    error: taskError.toString()
+    error: taskError.name,
+    cause: taskError.message
   }, (err) => {
     if (err) {
       console.log('sendTaskFailure err', err);
