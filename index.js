@@ -89,15 +89,14 @@ function startHeartbeat(taskToken) {
 * Tells workflow that the task has failed
 *
 * @param {string} taskToken - the task token
-* @param {Object} taskError - the error
+* @param {Object} taskError - the error object returned by the handler
 * @returns {undefined} - no return value
 **/
 function sendTaskFailure(taskToken, taskError) {
-  const error = taskError.toString();
   sf.sendTaskFailure({
     taskToken: taskToken,
-    error: error.substring(0, 250),
-    cause: error
+    error: taskError.name,
+    cause: taskError.message
   }, (err) => {
     if (err) {
       console.log('sendTaskFailure err', err);
