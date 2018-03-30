@@ -55,6 +55,18 @@ The important line is `Resource: ${EcsTaskHelloWorldActivity}`.
 
 We'll define that activity in the app/config.yml file.
 
+### ECS cluster configuration
+
+In order for an ECS cluster to be created as a part of your deployment stack, ensure you have the folowing in your `config.yml`:
+
+* An `ecs` config object (detailed in following section)
+* vpc.vpcId and vpc.subnets
+* iams.instanceProfile
+
+Also ensure if you have specified a VPC and subnet, your subnet is in the same availability zone as `ecs.availabilityZone`.
+
+See [`cumulus-integration-tests/blob/master/app/config.yml`](https://github.com/cumulus-nasa/cumulus-integration-tests/blob/master/app/config.yml) for an example.
+
 ### ECS config
 
 This library requires additional configuration to be added to the app/config.yml file under the `ecs` block, as well as a list of activity names under `activities`.
