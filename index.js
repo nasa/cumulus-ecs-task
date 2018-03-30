@@ -145,8 +145,8 @@ class TaskPoll extends EventEmitter {
   start() {
     // kick off sf.getActivityTask
     this.getTask();
-    // repeat every 60 seconds (the timeout of sf.getActivityTask)
-    this.intervalId = setInterval(() => this.getTask(), 60000);
+    // repeat every 65 seconds (the timeout of sf.getActivityTask)
+    this.intervalId = setInterval(() => this.getTask(), 65000);
   }
 
   /**
