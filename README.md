@@ -57,9 +57,9 @@ We'll define that activity in the app/config.yml file.
 
 ### ECS cluster configuration
 
-In order for the ECS cluster to be created for your deployment, ensure you have the folowing in your `config.yml`:
+In order for an ECS cluster to be created as a part of your deployment stack, ensure you have the folowing in your `config.yml`:
 
-* ecs config (detailed in following section)
+* An `ecs` config object (detailed in following section)
 * vpc.vpcId and vpc.subnets
 * iams.instanceProfile
 
