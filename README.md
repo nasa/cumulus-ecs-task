@@ -55,6 +55,24 @@ The important line is `Resource: ${EcsTaskHelloWorldActivity}`.
 
 We'll define that activity in the app/config.yml file.
 
+### ECS cluster configuration
+
+In order for the ECS cluster to be created for your deployment, ensure you have an iams.instanceProfile defined in `app/config.yml`. E.g.:
+
+```yaml
+# app/config.yml
+default:
+  stackName: test-cumulus
+
+  # ...
+
+  iams:
+    # ...
+    instanceProfile: 'arn:aws:iam::{{AWS_ACCOUNT_ID}}:instance-profile/test-cumulus-ecs'
+```
+
+Also ensure if you have specified a VPC and subnet, your subnet is in the same availability zone as `ecs.availabilityZone`.
+
 ### ECS config
 
 This library requires additional configuration to be added to the app/config.yml file under the `ecs` block, as well as a list of activity names under `activities`.
