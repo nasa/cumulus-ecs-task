@@ -57,21 +57,15 @@ We'll define that activity in the app/config.yml file.
 
 ### ECS cluster configuration
 
-In order for the ECS cluster to be created for your deployment, ensure you have an iams.instanceProfile defined in `app/config.yml`. E.g.:
+In order for the ECS cluster to be created for your deployment, ensure you have the folowing in your `config.yml`:
 
-```yaml
-# app/config.yml
-default:
-  stackName: test-cumulus
-
-  # ...
-
-  iams:
-    # ...
-    instanceProfile: 'arn:aws:iam::{{AWS_ACCOUNT_ID}}:instance-profile/test-cumulus-ecs'
-```
+* ecs config (detailed in following section)
+* vpc.vpcId and vpc.subnets
+* iams.instanceProfile
 
 Also ensure if you have specified a VPC and subnet, your subnet is in the same availability zone as `ecs.availabilityZone`.
+
+See [`cumulus-integration-tests/blob/master/app/config.yml`](https://github.com/cumulus-nasa/cumulus-integration-tests/blob/master/app/config.yml) for an example.
 
 ### ECS config
 
