@@ -10,4 +10,5 @@ cache-invalidation/config/runtime_config.json
 .env
 cumulus-message-adapter
 task
+yarn.lock
 .tmp-work

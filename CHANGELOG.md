@@ -6,6 +6,9 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/) and this p
 
 ## [Unreleased]
 
+## [v1.1.0] - 2018-04-12
+- Upgrade node version to node 8.11
+
 ## [v1.0.2] - 2018-03-30
 - increase activity queue timeout to 65 seconds as suggested here: https://docs.aws.amazon.com/AWSJavaScriptSDK/latest/AWS/StepFunctions.html#getActivityTask-property
 
