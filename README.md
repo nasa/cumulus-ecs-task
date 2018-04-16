@@ -81,7 +81,7 @@ yourdeployment:
     instanceType: t2.small
     desiredInstances: 1
     availabilityZone: us-east-1a
-    imageId: ami-a7a242da
+    amiid: ami-a7a242da
     publicIp: true
     docker: 
       username: cumulususer
