@@ -145,8 +145,8 @@ class TaskPoll extends EventEmitter {
   start() {
     // kick off sf.getActivityTask
     this.getTask();
-    // repeat every 65 seconds (the timeout of sf.getActivityTask)
-    this.intervalId = setInterval(() => this.getTask(), 65000);
+    // repeat every 70 seconds (the timeout of sf.getActivityTask)
+    this.intervalId = setInterval(() => this.getTask(), 70000);
   }
 
   /**
@@ -164,7 +164,6 @@ class TaskPoll extends EventEmitter {
         const event = JSON.parse(data.input);
         clearInterval(this.intervalId);
         this.emit('data', event, token);
-        this.start();
       }
     });
   }
