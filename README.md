@@ -73,7 +73,7 @@ See [`cumulus-integration-tests/blob/master/app/config.yml`](https://github.com/
 
 This library requires additional configuration to be added to the app/config.yml file under the `ecs` block, as well as a list of activity names under `activities`.
 
-Here's an example:
+Here's an example deploment configuration that would be placed in app/config.yml:
 
 ```yml
 yourdeployment:
@@ -135,6 +135,18 @@ We can give our service the same name as the activity. Be sure to double-check t
 
 Note that under the the `commands` section we're referencing the `EcsTaskHelloWorldActivity` as the `activityArn` and the `EcsTaskHelloWorldLambdaFunction` as the `lambdaArn`.
 
+#### Docker credentials
+
+Make sure to set the docker email and password in app/.env:
+
+```
+DOCKER_PASSWORD=<your password>
+DOCKER_EMAIL=<your email>
+```
+
+**Which docker credentials should we use?**
+
+Any valid credentials to authenticate with docker's API service. It's recommended to create an organization-specific docker hub account.
 
 ### IAM permissions
 
@@ -213,6 +225,34 @@ docker run -e AWS_ACCESS_KEY_ID='<aws-access-key>' \
 ```
 
 Finally, trigger a workflow. You can do this from the Cumulus dashboard, the Cumulus API, or with the AWS Console by supplying a 
+
+## Debugging:
+
+SSH into the ECS container instance.
+
+Make sure the EC2 instance has internet access and is able to pull the image from docker hub by doing:
+
+```
+docker pull cumuluss/cumulus-ecs-task:1.1.1
+```
+
+`cat` the ecs config file to make sure credentials are correct:
+
+```
+cat /etc/ecs/ecs.config
+```
+
+Check if there's multiple entries of the config.
+
+If there is, there are two things to try:
+
+- delete the ec2 instance and redeploy
+- delete the incorrect config and restart the ecs agent (i haven't tested this much but i expect it to work. you'll still want to update the docker credentials in the deployment's app directory). Restart the agent by doing:
+  ```sh
+  sudo stop ecs
+  source /etc/ecs/ecs.config
+  sudo start ecs
+  ```
 
 ## Create a release
 
