@@ -77,6 +77,19 @@ Here's an example:
 
 ```yml
 yourdeployment:
+  # make sure to set these environment variables in the app/.env file
+  params:
+    - name: DockerPassword
+      value: '{{DOCKER_PASSWORD}}'
+    - name: DockerEmail
+      value: '{{DOCKER_EMAIL}}'
+    - name: CmrPassword
+      value: '{{CMR_PASSWORD}}'
+
+  # define the ECS activity
+  activities:
+    - name: EcsTaskHelloWorld
+
   ecs:
     instanceType: t2.small
     desiredInstances: 1
@@ -84,14 +97,17 @@ yourdeployment:
     amiid: ami-a7a242da
     publicIp: true
     docker: 
-      username: cumulususer
+      username: <your docker user name>
     services:
       EcsTaskHelloWorld:
-        image: cumuluss/cumulus-ecs-task:1.0.0
-        cpu: 800
-        memory: 1500
-        count: 0
+        image: cumuluss/cumulus-ecs-task:1.1.1
+        cpu: 500
+        memory: 500
+        count: 0 # increase this to increase the number of tasks
         envs:
+          # env vars needed for core cumulus modules:
+          internal: <name of internal bucket>
+          stackName: <name of deployment (in this case it would be "yourdeployment")>
           AWS_DEFAULT_REGION:
             function: Fn::Sub
             value: '${AWS::Region}'
@@ -103,15 +119,12 @@ yourdeployment:
           - '--lambdaArn'
           - function: Ref
             value: EcsTaskHelloWorldLambdaFunction
-
-  activities:
-    - name: EcsTaskHelloWorld
 ```
 
 Make sure the version on this line:
 
 ```
-image: cumuluss/cumulus-ecs-task:1.0.0
+image: cumuluss/cumulus-ecs-task:1.1.1
 ```
 
 Is the latest version available on [Docker Hub](https://hub.docker.com/r/cumuluss/cumulus-ecs-task/tags/).
@@ -137,6 +150,7 @@ The following should be included in the `Statement` of the `EcsRole` policy:
   - states:SendTaskSuccess
   - states:SendTaskHeartbeat
   - states:GetActivityTask
+  - states:GetExecutionHistory
   Resource: arn:aws:states:*:*:*
 ```
 
