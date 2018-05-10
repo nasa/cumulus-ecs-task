@@ -73,7 +73,7 @@ See [`cumulus-integration-tests/blob/master/app/config.yml`](https://github.com/
 
 This library requires additional configuration to be added to the app/config.yml file under the `ecs` block, as well as a list of activity names under `activities`.
 
-Here's an example deploment configuration that would be placed in app/config.yml:
+Here's an example deployment configuration that would be placed in app/config.yml:
 
 ```yml
 yourdeployment:
@@ -226,7 +226,7 @@ docker run -e AWS_ACCESS_KEY_ID='<aws-access-key>' \
 
 Finally, trigger a workflow. You can do this from the Cumulus dashboard, the Cumulus API, or with the AWS Console by supplying a 
 
-## Debugging:
+## Troubleshooting
 
 SSH into the ECS container instance.
 
@@ -246,8 +246,8 @@ Check if there's multiple entries of the config.
 
 If there is, there are two things to try:
 
-- delete the ec2 instance and redeploy
-- delete the incorrect config and restart the ecs agent (i haven't tested this much but i expect it to work. you'll still want to update the docker credentials in the deployment's app directory). Restart the agent by doing:
+- Delete the ec2 instance and redeploy
+- Delete the incorrect config and restart the ecs agent (I haven't tested this much but I expect it to work. You'll still want to update the docker credentials in the deployment's app directory). Restart the agent by doing:
   ```sh
   sudo stop ecs
   source /etc/ecs/ecs.config
@@ -256,7 +256,9 @@ If there is, there are two things to try:
 
 ## Create a release
 
-Bump the version
+To create a release, first make sure the [CHANGELOG.md](CHANGELOG.md) file is updated with all the changes made.
+
+Next, bump the version and the changes will automatically be released upon merge to master.
 
 ```
 npm version <major|minor|patch|specific version>
