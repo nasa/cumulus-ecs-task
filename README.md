@@ -73,10 +73,23 @@ See [`cumulus-integration-tests/blob/master/app/config.yml`](https://github.com/
 
 This library requires additional configuration to be added to the app/config.yml file under the `ecs` block, as well as a list of activity names under `activities`.
 
-Here's an example:
+Here's an example deployment configuration that would be placed in app/config.yml:
 
 ```yml
 yourdeployment:
+  # make sure to set these environment variables in the app/.env file
+  params:
+    - name: DockerPassword
+      value: '{{DOCKER_PASSWORD}}'
+    - name: DockerEmail
+      value: '{{DOCKER_EMAIL}}'
+    - name: CmrPassword
+      value: '{{CMR_PASSWORD}}'
+
+  # define the ECS activity
+  activities:
+    - name: EcsTaskHelloWorld
+
   ecs:
     instanceType: t2.small
     desiredInstances: 1
@@ -84,14 +97,17 @@ yourdeployment:
     amiid: ami-a7a242da
     publicIp: true
     docker: 
-      username: cumulususer
+      username: <your docker user name>
     services:
       EcsTaskHelloWorld:
-        image: cumuluss/cumulus-ecs-task:1.0.0
-        cpu: 800
-        memory: 1500
-        count: 0
+        image: cumuluss/cumulus-ecs-task:1.1.1
+        cpu: 500
+        memory: 500
+        count: 0 # increase this to increase the number of tasks
         envs:
+          # env vars needed for core cumulus modules:
+          internal: <name of internal bucket>
+          stackName: <name of deployment (in this case it would be "yourdeployment")>
           AWS_DEFAULT_REGION:
             function: Fn::Sub
             value: '${AWS::Region}'
@@ -103,15 +119,12 @@ yourdeployment:
           - '--lambdaArn'
           - function: Ref
             value: EcsTaskHelloWorldLambdaFunction
-
-  activities:
-    - name: EcsTaskHelloWorld
 ```
 
 Make sure the version on this line:
 
 ```
-image: cumuluss/cumulus-ecs-task:1.0.0
+image: cumuluss/cumulus-ecs-task:1.1.1
 ```
 
 Is the latest version available on [Docker Hub](https://hub.docker.com/r/cumuluss/cumulus-ecs-task/tags/).
@@ -122,6 +135,18 @@ We can give our service the same name as the activity. Be sure to double-check t
 
 Note that under the the `commands` section we're referencing the `EcsTaskHelloWorldActivity` as the `activityArn` and the `EcsTaskHelloWorldLambdaFunction` as the `lambdaArn`.
 
+#### Docker credentials
+
+Make sure to set the docker email and password in app/.env:
+
+```
+DOCKER_PASSWORD=<your password>
+DOCKER_EMAIL=<your email>
+```
+
+**Which docker credentials should we use?**
+
+Any valid credentials to authenticate with docker's API service. It's recommended to create an organization-specific docker hub account.
 
 ### IAM permissions
 
@@ -137,6 +162,7 @@ The following should be included in the `Statement` of the `EcsRole` policy:
   - states:SendTaskSuccess
   - states:SendTaskHeartbeat
   - states:GetActivityTask
+  - states:GetExecutionHistory
   Resource: arn:aws:states:*:*:*
 ```
 
@@ -200,9 +226,39 @@ docker run -e AWS_ACCESS_KEY_ID='<aws-access-key>' \
 
 Finally, trigger a workflow. You can do this from the Cumulus dashboard, the Cumulus API, or with the AWS Console by supplying a 
 
+## Troubleshooting
+
+SSH into the ECS container instance.
+
+Make sure the EC2 instance has internet access and is able to pull the image from docker hub by doing:
+
+```
+docker pull cumuluss/cumulus-ecs-task:1.1.1
+```
+
+`cat` the ecs config file to make sure credentials are correct:
+
+```
+cat /etc/ecs/ecs.config
+```
+
+Check if there's multiple entries of the config.
+
+If there is, there are two things to try:
+
+- Delete the ec2 instance and redeploy
+- Delete the incorrect config and restart the ecs agent (I haven't tested this much but I expect it to work. You'll still want to update the docker credentials in the deployment's app directory). Restart the agent by doing:
+  ```sh
+  sudo stop ecs
+  source /etc/ecs/ecs.config
+  sudo start ecs
+  ```
+
 ## Create a release
 
-Bump the version
+To create a release, first make sure the [CHANGELOG.md](CHANGELOG.md) file is updated with all the changes made.
+
+Next, bump the version and the changes will automatically be released upon merge to master.
 
 ```
 npm version <major|minor|patch|specific version>
