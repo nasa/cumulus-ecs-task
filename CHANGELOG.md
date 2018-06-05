@@ -6,6 +6,11 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/) and this p
 
 ## [Unreleased]
 
+## [v1.1.2] - 2018-06-05
+### Fixed
+- **CUMULUS-602** - Format all logs sent to Elastic Search.
+  - Format the error message.
+
 ## [v1.1.1] - 2018-04-23
 ### Fixed
 - Fix a bug where the ecs task did not start correctly [CUMULUS-519] 
@@ -24,9 +29,10 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/) and this p
 ### Added
 - Initial release
 
-[Unreleased]: https://github.com/cumulus-nasa/cumulus-cumulus-ecs-task/compare/v1.0.2...HEAD
-[v1.1.1]: https://github.com/cumulus-nasa/cumulus-cumulus-ecs-task/compare/v1.1.0...v1.1.1
-[v1.1.0]: https://github.com/cumulus-nasa/cumulus-cumulus-ecs-task/compare/v1.0.2...v1.1.0
-[v1.0.2]: https://github.com/cumulus-nasa/cumulus-cumulus-ecs-task/compare/v1.0.1...v1.0.2
-[v1.0.1]: https://github.com/cumulus-nasa/cumulus-cumulus-ecs-task/compare/v1.0.0...v1.0.1
+[Unreleased]: https://github.com/cumulus-nasa/cumulus-ecs-task/compare/v1.1.2...HEAD
+[v1.1.2]: https://github.com/cumulus-nasa/cumulus-ecs-task/compare/v1.1.1...v1.1.2
+[v1.1.1]: https://github.com/cumulus-nasa/cumulus-ecs-task/compare/v1.1.0...v1.1.1
+[v1.1.0]: https://github.com/cumulus-nasa/cumulus-ecs-task/compare/v1.0.2...v1.1.0
+[v1.0.2]: https://github.com/cumulus-nasa/cumulus-ecs-task/compare/v1.0.1...v1.0.2
+[v1.0.1]: https://github.com/cumulus-nasa/cumulus-ecs-task/compare/v1.0.0...v1.0.1
 [v1.0.0]: https://github.com/cumulus-nasa/cumulus-ecs-task/tree/v1.0.0
