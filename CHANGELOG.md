@@ -5,6 +5,9 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/) and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased]
+### Fixed
+- **CUMULUS-602** - Format all logs sent to Elastic Search.
+  - Format the error message.
 
 ## [v1.1.1] - 2018-04-23
 ### Fixed

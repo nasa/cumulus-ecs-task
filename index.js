@@ -15,6 +15,36 @@ AWS.config.update({ region: region });
 const sf = new AWS.StepFunctions({ apiVersion: '2016-11-23' });
 
 /**
+ * Constructs JSON to log and logs it
+ * 
+ * @param {string} level - type of log (trace, debug, info, warn, error, fatal)
+ * @param {string} message - message to log
+ * @returns {undefined} - log is printed to stdout, nothing is returned
+ */
+function logMessage(level, message) {
+  const time = new Date();
+  let output = {
+    level,
+    timestamp: time.toISOString(),
+    message
+  };
+
+  console.log(JSON.stringify(output));
+}
+
+/**
+ * 
+ * @param {string} message - message to log
+ * @param {Error} err - Error object
+ * @returns {undefined} - log is printed to stdout, nothing is returned
+ */
+function logError(message, err) {
+   // error stack with newlines and no leading space or tab will result in separate log entry
+   const msg = `${message} ${err.stack.replace(/\n/g, ' ')}`;
+   logMessage('error', msg);
+}
+
+/**
 * Download the zip file of a lambda function from AWS
 *
 * @param {string} arn - the arn of the lambda function
@@ -79,7 +109,7 @@ function startHeartbeat(taskToken) {
   return setInterval(() => {
     sf.sendTaskHeartbeat({ taskToken }, (err) => {
       if (err) {
-        console.log('error sending heartbeat', err);
+        logError('error sending heartbeat', err);
       }
     }, 60000);
   });
@@ -99,7 +129,7 @@ function sendTaskFailure(taskToken, taskError) {
     cause: taskError.message
   }, (err) => {
     if (err) {
-      console.log('sendTaskFailure err', err);
+      logError('sendTaskFailure err', err);
     }
   });
 }
@@ -117,7 +147,7 @@ function sendTaskSuccess(taskToken, output) {
     output: output
   }, (err) => {
     if (err) {
-      console.log('sendTasksuccess error', err);
+      logError('sendTasksuccess error', err);
     }
   });
 }
@@ -242,7 +272,7 @@ function runService(options) {
     const poll = new TaskPoll(activityArn, heartbeatInterval);
 
     poll.on('error', (err) => {
-      console.log('error polling for work with sf.getActivityTask', err);
+      logError('error polling for work with sf.getActivityTask', err);
     });
 
     poll.on('data', (event, taskToken) => {
