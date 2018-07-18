@@ -1,23 +1,23 @@
 version: 2
 
 jobs:
-  release:
+  build:
     docker:
       - image: circleci/node:8.11
     working_directory: ~/project
     steps:
       - checkout
       - setup_remote_docker
-      - run: |
-          echo "//registry.npmjs.org/:_authToken=${NPM_TOKEN}" > ~/.npmrc
-          npm install
-          ./bin/release.sh
-
-workflows:
-  version: 2
-  build_release:
-    jobs:
-      - release:
-          filters:
-            branches:
-              only: master
+      - run:
+          name: Install
+          command: npm install
+      - run:
+          name: Build
+          command: docker build -t cumuluss/cumulus-ecs-task .
+      - run:
+          name: Deploy
+          command: |
+            if [[  "$CIRCLE_BRANCH" == 'master' ]]; then
+              echo "//registry.npmjs.org/:_authToken=${NPM_TOKEN}" > ~/.npmrc
+              ./bin/release.sh
+            fi

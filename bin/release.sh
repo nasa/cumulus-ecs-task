@@ -13,7 +13,6 @@ fi
 
 if [ "$VERSION" != "$PREVIOUS_VERSION" ]; then
   npm publish --access public
-  docker build -t cumuluss/cumulus-ecs-task .
   docker login -u cumulususer -p $DOCKER_PASSWORD
   docker tag $IMAGE:latest $IMAGE:$VERSION
   docker push $IMAGE:$VERSION
