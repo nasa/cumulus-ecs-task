@@ -1,6 +1,6 @@
 # cumulus-ecs-task
 
-[![CircleCI](https://circleci.com/gh/cumulus-nasa/cumulus-ecs-task.svg?style=svg)](https://circleci.com/gh/cumulus-nasa/cumulus-ecs-task)
+[![CircleCI](https://circleci.com/gh/nasa/cumulus-ecs-task.svg?style=svg)](https://circleci.com/gh/nasa/cumulus-ecs-task)
 
 Use this Docker image to run a Node.js Lambda function in AWS [ECS](https://aws.amazon.com/ecs/).
 
