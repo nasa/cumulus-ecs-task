@@ -15,6 +15,9 @@ jobs:
           name: Build
           command: docker build -t cumuluss/cumulus-ecs-task .
       - run:
+          name: Test 
+          command: npm run test
+      - run:
           name: Deploy
           command: |
             if [[  "$CIRCLE_BRANCH" == 'master' ]]; then
