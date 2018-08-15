@@ -27,6 +27,7 @@
   "scripts": {
     "test": "ava tests/test.js",
     "start": "./bin/service.js",
+    "lint": "eslint . --ext js",
     "build": "docker build -t cumuluss/cumulus-ecs-task .",
     "release": "./bin/release.sh",
     "docker:clean": "docker rm -v $(docker ps -a -q -f status=exited); docker rmi $(docker images -f \"dangling=true\" -q); true"

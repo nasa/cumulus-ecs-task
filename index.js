@@ -39,7 +39,13 @@ function logMessage(level, message) {
  */
 function logError(message, err) {
   // error stack with newlines and no leading space or tab will result in separate log entry
-  const msg = `${message} ${err.stack.replace(/\n/g, ' ')}`;
+  let msg;
+  if (err.stack) {
+    msg = `${message} ${err.stack.replace(/\n/g, ' ')}`;
+  }
+  else {
+    msg = err;
+  }
   logMessage('error', msg);
 }
 

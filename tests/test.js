@@ -9,13 +9,17 @@ import nock from 'nock';
 import sinon from 'sinon';
 import AWS from 'aws-sdk';
 import archiver from 'archiver';
-import { runTask, runServiceFromActivity, runServiceFromSQS } from '../index';
+import { runTask } from '../index';
 
 
 test.beforeEach(async (t) => {
   t.context.tempDir = path.join(os.tmpdir(), 'cumulus-ecs-task', `${Date.now()}`, path.sep);
   fs.mkdirpSync(t.context.tempDir);
   t.context.lambdaZip = path.join(t.context.tempDir, 'remoteLambda.zip');
+  t.context.taskDirectory = path.join(t.context.tempDir, 'task');
+  t.context.workDirectory = path.join(t.context.tempDir, '.tmp-work');
+  fs.mkdirpSync(t.context.taskDirectory);
+  fs.mkdirpSync(t.context.workDirectory);
 
   // zip fake lambda
   await new Promise((resolve, reject) => {
@@ -58,24 +62,25 @@ test.afterEach.always((t) => {
 
 test.serial('test successful task run', async (t) => {
   const event = { hi: 'bye' };
-  const taskDirectory = path.join(t.context.tempDir, 'task');
-  const workDirectory = path.join(t.context.tempDir, '.tmp-work');
-  fs.mkdirpSync(taskDirectory);
-  fs.mkdirpSync(workDirectory);
 
   const output = await runTask({
     lambdaArn: 'fakearn',
     lambdaInput: event,
-    taskDirectory,
-    workDirectory
+    taskDirectory: t.context.taskDirectory,
+    workDirectory: t.context.workDirectory
   });
 
   t.deepEqual(event, output);
 });
 
-// test.serial('test failed invoke', async (t) => {
-//   const event = { hi: 'bye', error: 'it failed' };
-//   const promise = awa(event, 'fake', t.context.tempDir);
-//   const error = await t.throws(promise);
-//   t.is(error, event.error);
-// });
+test.serial('test failed task run', async (t) => {
+  const event = { hi: 'bye', error: 'it failed' };
+  const promise = runTask({
+    lambdaArn: 'fakearn',
+    lambdaInput: event,
+    taskDirectory: t.context.taskDirectory,
+    workDirectory: t.context.workDirectory
+  });
+  const error = await t.throws(promise);
+  t.is(error, event.error);
+});

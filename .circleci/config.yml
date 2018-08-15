@@ -12,11 +12,14 @@ jobs:
           name: Install
           command: npm install
       - run:
-          name: Build
-          command: docker build -t cumuluss/cumulus-ecs-task .
+          name: Lint
+          command: npm run lint
       - run:
           name: Test 
           command: npm run test
+      - run:
+          name: Build
+          command: docker build -t cumuluss/cumulus-ecs-task .
       - run:
           name: Deploy
           command: |
