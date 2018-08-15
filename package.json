@@ -25,12 +25,15 @@
     "rimraf": "^2.6.2"
   },
   "scripts": {
+    "test": "ava tests/test.js",
     "start": "./bin/service.js",
     "build": "docker build -t cumuluss/cumulus-ecs-task .",
     "release": "./bin/release.sh",
     "docker:clean": "docker rm -v $(docker ps -a -q -f status=exited); docker rmi $(docker images -f \"dangling=true\" -q); true"
   },
   "devDependencies": {
+    "archiver": "^2.1.1",
+    "ava": "^0.25.0",
     "babel-eslint": "^6.1.2",
     "eslint": "^3.2.2",
     "eslint-config-airbnb": "^10.0.0",
@@ -38,6 +41,9 @@
     "eslint-plugin-jsdoc": "^3.3.1",
     "eslint-plugin-jsx-a11y": "^2.1.0",
     "eslint-plugin-react": "^6.0.0",
-    "jsonfilter": "^1.1.2"
+    "fs-extra": "^7.0.0",
+    "jsonfilter": "^1.1.2",
+    "nock": "^9.6.1",
+    "sinon": "^6.1.5"
   }
 }

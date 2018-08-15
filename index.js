@@ -4,7 +4,6 @@ const https = require('https');
 const path = require('path');
 const execSync = require('child_process').execSync;
 const assert = require('assert');
-const EventEmitter = require('events').EventEmitter;
 
 const AWS = require('aws-sdk');
 const fs = require('fs');
@@ -16,14 +15,14 @@ const sf = new AWS.StepFunctions({ apiVersion: '2016-11-23' });
 
 /**
  * Constructs JSON to log and logs it
- * 
+ *
  * @param {string} level - type of log (trace, debug, info, warn, error, fatal)
  * @param {string} message - message to log
  * @returns {undefined} - log is printed to stdout, nothing is returned
  */
 function logMessage(level, message) {
   const time = new Date();
-  let output = {
+  const output = {
     level,
     timestamp: time.toISOString(),
     message
@@ -33,15 +32,15 @@ function logMessage(level, message) {
 }
 
 /**
- * 
+ *
  * @param {string} message - message to log
  * @param {Error} err - Error object
  * @returns {undefined} - log is printed to stdout, nothing is returned
  */
 function logError(message, err) {
-   // error stack with newlines and no leading space or tab will result in separate log entry
-   const msg = `${message} ${err.stack.replace(/\n/g, ' ')}`;
-   logMessage('error', msg);
+  // error stack with newlines and no leading space or tab will result in separate log entry
+  const msg = `${message} ${err.stack.replace(/\n/g, ' ')}`;
+  logMessage('error', msg);
 }
 
 /**
@@ -49,31 +48,30 @@ function logError(message, err) {
 *
 * @param {string} arn - the arn of the lambda function
 * @param {strind} workDir - the dir to download the lambda function to
-* @param {function} callback - callback function with `err`, `filepath`, `moduleFileName`,
-* and `moduleFunctionName` arguments.
+* @returns {Promise<Object>} returns an object that includes `filepath`,
+* `moduleFileName`, `moduleFunctionName` arguments.
 * The `filepath` is the path to the zip file of the lambda function.
 * The `moduleFileName` is the filename of the node module.
 * The `moduleFunctionName` is the name of the exported function to call in the module.
-* @returns {undefined} - callback is used instead of return value
 **/
-function getLambdaZip(arn, workDir, callback) {
+async function getLambdaZip(arn, workDir) {
   const lambda = new AWS.Lambda({ apiVersion: '2015-03-31' });
 
-  lambda.getFunction({ FunctionName: arn }, (err, data) => {
-    if (err) return callback(err);
+  const data = await lambda.getFunction({ FunctionName: arn }).promise();
 
-    const codeUrl = data.Code.Location;
-    const handlerId = data.Configuration.Handler;
-    const moduleFn = handlerId.split('.');
-    const moduleFileName = moduleFn[0];
-    const moduleFunctionName = moduleFn[1];
+  const codeUrl = data.Code.Location;
+  const handlerId = data.Configuration.Handler;
+  const moduleFn = handlerId.split('.');
+  const moduleFileName = moduleFn[0];
+  const moduleFunctionName = moduleFn[1];
 
-    const filepath = path.join(workDir, 'fn.zip');
-    const file = fs.createWriteStream(filepath);
+  const filepath = path.join(workDir, 'fn.zip');
+  const file = fs.createWriteStream(filepath);
 
-    file.on('error', callback);
+  return new Promise((resolve, reject) => {
+    file.on('error', reject);
     file.on('finish', () => file.close());
-    file.on('close', () => callback(null, filepath, moduleFileName, moduleFunctionName));
+    file.on('close', () => resolve({ filepath, moduleFileName, moduleFunctionName }));
 
     return https.get(codeUrl, (res) => res.pipe(file));
   });
@@ -85,18 +83,15 @@ function getLambdaZip(arn, workDir, callback) {
 * @param {string} lambdaArn - the arn of the lambda function
 * @param {string} workDir - the temporary dir used to download the lambda zip file
 * @param {string} taskDir - the dir where the lambda function will be located
-* @param {function} callback - callback function with `err`, `handler` arguments
-* the `handler` is the javascript function that will run in the ECS service
-* @returns {undefined} - callback is used instead of return value
+* @returns {Promise<Function>} the `handler` which is the javascript function
+*                              that will run in the ECS service
 **/
-function downloadLambdaHandler(lambdaArn, workDir, taskDir, callback) {
-  return getLambdaZip(lambdaArn, workDir, (err, filepath, moduleFileName, moduleFunctionName) => {
-    if (err) return callback(err);
+async function downloadLambdaHandler(lambdaArn, workDir, taskDir) {
+  const resp = await getLambdaZip(lambdaArn, workDir);
 
-    execSync(`unzip -o ${filepath} -d ${taskDir}`);
-    const task = require(`${taskDir}/${moduleFileName}`); //eslint-disable-line global-require
-    return callback(null, task[moduleFunctionName]);
-  });
+  execSync(`unzip -o ${resp.filepath} -d ${taskDir}`);
+  const task = require(`${taskDir}/${resp.moduleFileName}`); //eslint-disable-line global-require
+  return task[resp.moduleFunctionName];
 }
 
 /**
@@ -111,6 +106,7 @@ function startHeartbeat(taskToken) {
       if (err) {
         logError('error sending heartbeat', err);
       }
+      logMessage('info', `sending heartbeat, confirming ${taskToken} is still in progress`);
     }, 60000);
   });
 }
@@ -131,6 +127,7 @@ function sendTaskFailure(taskToken, taskError) {
     if (err) {
       logError('sendTaskFailure err', err);
     }
+    logMessage('info', `task failed for ${taskToken}`);
   });
 }
 
@@ -147,56 +144,53 @@ function sendTaskSuccess(taskToken, output) {
     output: output
   }, (err) => {
     if (err) {
-      logError('sendTasksuccess error', err);
+      logError('sendTaskSuccess failed', err);
     }
+    logMessage('info', `task completed successfully for ${taskToken}`);
   });
 }
 
 /**
-* Simple class for polling the state machine for work
+* receives an activity message from the StepFunction Activity Queue
+*
+* @param {string} activityArn - the activity arn
+* @returns {Promise} the lambda task event object and the
+*                    activity task's token. If the activity task returns
+*                    empty, the function returns undefined response
 **/
-class TaskPoll extends EventEmitter {
-  /**
-  * initialize Poll class
-  *
-  * @param {string} activityArn - the lambda activity arn
-  * @returns {undefined} - no return value
-  **/
-  constructor(activityArn) {
-    super();
-    this.activityArn = activityArn;
+async function getActivityTask(activityArn) {
+  const data = await sf.getActivityTask({ activityArn }).promise();
+  if (data && data.taskToken && data.taskToken.length && data.input) {
+    const token = data.taskToken;
+    const event = JSON.parse(data.input);
+    return {
+      event,
+      token
+    };
   }
+  logMessage('info', 'No tasks in the activity queue');
+  return undefined;
+}
 
-  /**
-  * start polling
-  *
-  * @returns {undefined} - no return value
-  **/
-  start() {
-    // kick off sf.getActivityTask
-    this.getTask();
-    // repeat every 70 seconds (the timeout of sf.getActivityTask)
-    this.intervalId = setInterval(() => this.getTask(), 70000);
-  }
 
-  /**
-  * repeatedly checks for work using sf.getActivityTask
-  *
-  * @returns {undefined} - no return value
-  **/
-  getTask() {
-    sf.getActivityTask({ activityArn: this.activityArn }, (err, data) => {
+/**
+* Handle the lambda task response
+*
+* @param {Object} event - the event to pass to the lambda function
+* @param {Function} handler - the lambda function to execute
+* @returns {Promise} the lambda functions response
+**/
+function handleResponse(event, handler) {
+  const context = { via: 'ECS' };
+
+  return new Promise((resolve, reject) => {
+    handler(event, context, (err, output) => {
       if (err) {
-        this.emit('error', err);
+        return reject(err);
       }
-      else if (data && data.taskToken && data.taskToken.length && data.input) {
-        const token = data.taskToken;
-        const event = JSON.parse(data.input);
-        clearInterval(this.intervalId);
-        this.emit('data', event, token);
-      }
+      return resolve(output);
     });
-  }
+  });
 }
 
 /**
@@ -209,30 +203,137 @@ class TaskPoll extends EventEmitter {
 * defaults to null, which deactivates heartbeats
 * @returns {undefined} - no return value
 **/
-function handlePollResponse(event, taskToken, handler, heartbeatInterval) {
-  const context = { via: 'ECS' };
+async function handlePollResponse(event, taskToken, handler, heartbeatInterval) {
   let heartbeat;
 
   if (heartbeatInterval) {
     heartbeat = startHeartbeat(taskToken);
   }
 
-  handler(event, context, (err, output) => {
+  try {
+    const output = await handleResponse(event, handler);
     if (heartbeatInterval) {
       clearInterval(heartbeat);
     }
-
-    if (err) {
-      sendTaskFailure(taskToken, err);
-    }
-    else {
-      sendTaskSuccess(taskToken, JSON.stringify(output));
-    }
-  });
+    sendTaskSuccess(taskToken, JSON.stringify(output));
+  }
+  catch (err) {
+    sendTaskFailure(taskToken, err);
+  }
 }
 
 /**
-* Start the Lambda handler as a service
+* Start the Lambda handler as a one time task. When the task completes
+* the process exits
+*
+* @param {Object} options - options object
+* @param {string} options.lambdaArn - the arn of the lambda handler
+* @param {string} options.lambdaInput - the input to the lambda handler
+* @param {string} options.taskDirectory - the directory to put the unzipped lambda zip
+* @param {string} options.workDirectory - the directory to use for downloading the lambda zip file
+* @returns {Promise} the output of the lambda function response
+**/
+async function runTask(options) {
+  assert(options && typeof options === 'object', 'options.lambdaArn string is required');
+  assert(options && typeof options.lambdaInput === 'object', 'options.lambdaInput object is required');
+  assert(options.taskDirectory && typeof options.taskDirectory === 'string', 'options.taskDirectory string is required');
+  assert(options.workDirectory && typeof options.workDirectory === 'string', 'options.workDirectory string is required');
+  const lambdaArn = options.lambdaArn;
+  const event = options.lambdaInput;
+  const taskDir = options.taskDirectory;
+  const workDir = options.workDirectory;
+
+  // the cumulus-message-adapter dir is in an unexpected place,
+  // so tell the adapter where to find it
+  process.env.CUMULUS_MESSAGE_ADAPTER_DIR = `${taskDir}/cumulus-message-adapter/`;
+
+  logMessage('info', 'Downloading the Lambda function');
+  try {
+    const handler = await downloadLambdaHandler(lambdaArn, workDir, taskDir);
+    const output = await handleResponse(event, handler);
+    logMessage('info', 'task executed successfully');
+    return output;
+  }
+  catch (e) {
+    logError('task failed with an error', e);
+    throw e;
+  }
+}
+
+/**
+* Start the Lambda handler as a service by polling a sqs queue
+* The function will not quit unless the process is terminated
+*
+* @param {Object} options - options object
+* @param {string} options.lambdaArn - the arn of the lambda handler
+* @param {string} options.sqsUrl   - the url to the sqs queue
+* @param {integer} options.heartbeat - number of milliseconds between heartbeat messages.
+* defaults to null, which deactivates heartbeats
+* @param {string} options.taskDirectory - the directory to put the unzipped lambda zip
+* @param {string} options.workDirectory - the directory to use for downloading the lambda zip file
+* @param {boolean} [options.runForever=true] - whether to poll the activity forever (defaults to true)
+* @returns {Promise<undefined>} undefined
+**/
+async function runServiceFromSQS(options) {
+  assert(options && typeof options === 'object', 'options.lambdaArn string is required');
+  assert(options.lambdaArn && typeof options.lambdaArn === 'string', 'options.lambdaArn string is required');
+  assert(options.sqsUrl && typeof options.sqsUrl === 'string', 'options.sqsUrl string is required');
+  assert(options.taskDirectory && typeof options.taskDirectory === 'string', 'options.taskDirectory string is required');
+  assert(options.workDirectory && typeof options.workDirectory === 'string', 'options.workDirectory string is required');
+
+  const sqs = new AWS.SQS({ apiVersion: '2016-11-23' });
+
+  const lambdaArn = options.lambdaArn;
+  const sqsUrl = options.sqsUrl;
+  const taskDir = options.taskDirectory;
+  const workDir = options.workDirectory;
+  const runForever = options.runForever || true;
+
+  // the cumulus-message-adapter dir is in an unexpected place,
+  // so tell the adapter where to find it
+  process.env.CUMULUS_MESSAGE_ADAPTER_DIR = `${taskDir}/cumulus-message-adapter/`;
+
+  logMessage('info', 'Downloading the Lambda function');
+  const handler = await downloadLambdaHandler(lambdaArn, workDir, taskDir);
+  let counter = 1;
+  while (runForever) {
+    try {
+      logMessage('info', `[${counter}] Getting tasks from ${sqsUrl}`);
+      const resp = await sqs.receiveMessage({
+        QueueUrl: sqsUrl,
+        WaitTimeSeconds: 20
+      }).promise();
+      const messages = resp.Messages;
+      if (messages) {
+        const promises = messages.map(async (message) => {
+          if (message && message.Body) {
+            const receipt = message.ReceiptHandle;
+            logMessage('info', 'received message from queue, executing the task');
+            const event = JSON.parse(message.Body);
+            await handleResponse(event, handler);
+
+            // remove the message from queue
+            logMessage('info', `message with handler ${receipt} deleted from the queue`);
+            await sqs.deleteMessage({ QueueUrl: sqsUrl, ReceiptHandle: receipt }).promise();
+          }
+          return undefined;
+        });
+        await promises;
+      }
+      else {
+        logMessage('info', 'There are no new messages in the queue. Polling again!');
+      }
+    }
+    catch (e) {
+      logError('Task failed. trying again', e);
+    }
+    counter += 1;
+  }
+}
+
+/**
+* Start the Lambda handler as a service by polling a SF activity queue
+* The function will not quit unless the process is terminated
 *
 * @param {Object} options - options object
 * @param {string} options.lambdaArn - the arn of the lambda handler
@@ -241,9 +342,10 @@ function handlePollResponse(event, taskToken, handler, heartbeatInterval) {
 * defaults to null, which deactivates heartbeats
 * @param {string} options.taskDirectory - the directory to put the unzipped lambda zip
 * @param {string} options.workDirectory - the directory to use for downloading the lambda zip file
-* @returns {undefined} - callback is used instead of return value
+* @param {boolean} [options.runForever=true] - whether to poll the activity forever (defaults to true)
+* @returns {Promise<undefined>} undefined
 **/
-function runService(options) {
+async function runServiceFromActivity(options) {
   assert(options && typeof options === 'object', 'options.lambdaArn string is required');
   assert(options.lambdaArn && typeof options.lambdaArn === 'string', 'options.lambdaArn string is required');
   assert(options.activityArn && typeof options.activityArn === 'string', 'options.activityArn string is required');
@@ -258,29 +360,38 @@ function runService(options) {
   const taskDir = options.taskDirectory;
   const workDir = options.workDirectory;
   const heartbeatInterval = options.heartbeat;
+  const runForever = options.runForever || true;
 
   // the cumulus-message-adapter dir is in an unexpected place,
   // so tell the adapter where to find it
   process.env.CUMULUS_MESSAGE_ADAPTER_DIR = `${taskDir}/cumulus-message-adapter/`;
 
-  downloadLambdaHandler(lambdaArn, workDir, taskDir, (downloadError, handler) => {
-    if (downloadError) {
-      // if lambda isn't downloaded, throw the error, as nothing else will work
-      throw downloadError;
+  logMessage('info', 'Downloading the Lambda function');
+  const handler = await downloadLambdaHandler(lambdaArn, workDir, taskDir);
+  let counter = 1;
+  while (runForever) {
+    logMessage('info', `[${counter}] Getting tasks from ${activityArn}`);
+    try {
+      const activity = await getActivityTask(activityArn);
+      if (activity) {
+        await handlePollResponse(
+          activity.event,
+          activity.token,
+          handler,
+          heartbeatInterval
+        );
+      }
     }
-
-    const poll = new TaskPoll(activityArn, heartbeatInterval);
-
-    poll.on('error', (err) => {
-      logError('error polling for work with sf.getActivityTask', err);
-    });
-
-    poll.on('data', (event, taskToken) => {
-      handlePollResponse(event, taskToken, handler, heartbeatInterval);
-    });
-
-    poll.start();
-  });
+    catch (e) {
+      logError('Task failed. trying again', e);
+    }
+    counter += 1;
+  }
 }
 
-module.exports = runService;
+module.exports = {
+  runServiceFromActivity,
+  runServiceFromSQS,
+  runTask,
+  logMessage
+};

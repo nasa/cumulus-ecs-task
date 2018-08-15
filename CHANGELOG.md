@@ -6,6 +6,25 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/) and this p
 
 ## [Unreleased]
 
+## [v1.2.0]
+
+### Added
+- Support for running a single lambda task
+- Support for running tasks from messages in SQS
+- Unit tests for the library
+- the CLI supports new flags:
+  - `--help` for returning CLI options
+  - `--sqs-url` for reading message from the queue
+  - `--lambda-input` for running one task
+
+### Changed
+- The internal implementation of Step Function Activity polling changed
+  - The functions updated to use promises instead of callbacks
+  - The TaskPoll class replaced with a simple function
+
+### Fixed
+- improved logging
+
 ## [v1.1.2] - 2018-06-05
 ### Fixed
 - **CUMULUS-602** - Format all logs sent to Elastic Search.
@@ -29,10 +48,10 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/) and this p
 ### Added
 - Initial release
 
-[Unreleased]: https://github.com/cumulus-nasa/cumulus-ecs-task/compare/v1.1.2...HEAD
-[v1.1.2]: https://github.com/cumulus-nasa/cumulus-ecs-task/compare/v1.1.1...v1.1.2
-[v1.1.1]: https://github.com/cumulus-nasa/cumulus-ecs-task/compare/v1.1.0...v1.1.1
-[v1.1.0]: https://github.com/cumulus-nasa/cumulus-ecs-task/compare/v1.0.2...v1.1.0
-[v1.0.2]: https://github.com/cumulus-nasa/cumulus-ecs-task/compare/v1.0.1...v1.0.2
-[v1.0.1]: https://github.com/cumulus-nasa/cumulus-ecs-task/compare/v1.0.0...v1.0.1
-[v1.0.0]: https://github.com/cumulus-nasa/cumulus-ecs-task/tree/v1.0.0
+[Unreleased]: https://github.com/nasa/cumulus-ecs-task/compare/v1.1.2...HEAD
+[v1.1.2]: https://github.com/nasa/cumulus-ecs-task/compare/v1.1.1...v1.1.2
+[v1.1.1]: https://github.com/nasa/cumulus-ecs-task/compare/v1.1.0...v1.1.1
+[v1.1.0]: https://github.com/nasa/cumulus-ecs-task/compare/v1.0.2...v1.1.0
+[v1.0.2]: https://github.com/nasa/cumulus-ecs-task/compare/v1.0.1...v1.0.2
+[v1.0.1]: https://github.com/nasa/cumulus-ecs-task/compare/v1.0.0...v1.0.1
+[v1.0.0]: https://github.com/nasa/cumulus-ecs-task/tree/v1.0.0
