@@ -48,7 +48,8 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/) and this p
 ### Added
 - Initial release
 
-[Unreleased]: https://github.com/nasa/cumulus-ecs-task/compare/v1.1.2...HEAD
+[Unreleased]: https://github.com/nasa/cumulus-ecs-task/compare/v1.2.0...HEAD
+[v1.1.2]: https://github.com/nasa/cumulus-ecs-task/compare/v1.1.2...v1.2.0
 [v1.1.2]: https://github.com/nasa/cumulus-ecs-task/compare/v1.1.1...v1.1.2
 [v1.1.1]: https://github.com/nasa/cumulus-ecs-task/compare/v1.1.0...v1.1.1
 [v1.1.0]: https://github.com/nasa/cumulus-ecs-task/compare/v1.0.2...v1.1.0
