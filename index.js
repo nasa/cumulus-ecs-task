@@ -11,7 +11,6 @@ const fs = require('fs');
 const region = process.env.AWS_DEFAULT_REGION || 'us-east-1';
 AWS.config.update({ region: region });
 
-const sf = new AWS.StepFunctions({ apiVersion: '2016-11-23' });
 
 /**
  * Constructs JSON to log and logs it
@@ -107,6 +106,7 @@ async function downloadLambdaHandler(lambdaArn, workDir, taskDir) {
 * @returns {intervalId} - interval id used by `clearInterval`
 **/
 function startHeartbeat(taskToken) {
+  const sf = new AWS.StepFunctions({ apiVersion: '2016-11-23' });
   return setInterval(() => {
     sf.sendTaskHeartbeat({ taskToken }, (err) => {
       if (err) {
@@ -122,19 +122,15 @@ function startHeartbeat(taskToken) {
 *
 * @param {string} taskToken - the task token
 * @param {Object} taskError - the error object returned by the handler
-* @returns {undefined} - no return value
+* @returns {Promise<Object>} - step function send task failure output
 **/
 function sendTaskFailure(taskToken, taskError) {
-  sf.sendTaskFailure({
+  const sf = new AWS.StepFunctions({ apiVersion: '2016-11-23' });
+  return sf.sendTaskFailure({
     taskToken: taskToken,
     error: taskError.name,
     cause: taskError.message
-  }, (err) => {
-    if (err) {
-      logError('sendTaskFailure err', err);
-    }
-    logMessage('info', `task failed for ${taskToken}`);
-  });
+  }).promise();
 }
 
 /**
@@ -142,18 +138,14 @@ function sendTaskFailure(taskToken, taskError) {
 *
 * @param {string} taskToken - the task token
 * @param {Object} output - output message for next task
-* @returns {undefined} - no return value
+* @returns {Promise<Object>} - step function send task success output
 **/
 function sendTaskSuccess(taskToken, output) {
-  sf.sendTaskSuccess({
+  const sf = new AWS.StepFunctions({ apiVersion: '2016-11-23' });
+  return sf.sendTaskSuccess({
     taskToken: taskToken,
     output: output
-  }, (err) => {
-    if (err) {
-      logError('sendTaskSuccess failed', err);
-    }
-    logMessage('info', `task completed successfully for ${taskToken}`);
-  });
+  }).promise();
 }
 
 /**
@@ -165,7 +157,9 @@ function sendTaskSuccess(taskToken, output) {
 *                    empty, the function returns undefined response
 **/
 async function getActivityTask(activityArn) {
+  const sf = new AWS.StepFunctions({ apiVersion: '2016-11-23' });
   const data = await sf.getActivityTask({ activityArn }).promise();
+
   if (data && data.taskToken && data.taskToken.length && data.input) {
     const token = data.taskToken;
     const event = JSON.parse(data.input);
@@ -221,10 +215,10 @@ async function handlePollResponse(event, taskToken, handler, heartbeatInterval) 
     if (heartbeatInterval) {
       clearInterval(heartbeat);
     }
-    sendTaskSuccess(taskToken, JSON.stringify(output));
+    await sendTaskSuccess(taskToken, JSON.stringify(output));
   }
   catch (err) {
-    sendTaskFailure(taskToken, err);
+    await sendTaskFailure(taskToken, err);
   }
 }
 
@@ -366,7 +360,8 @@ async function runServiceFromActivity(options) {
   const taskDir = options.taskDirectory;
   const workDir = options.workDirectory;
   const heartbeatInterval = options.heartbeat;
-  const runForever = options.runForever || true;
+
+  let runForever = true;
 
   // the cumulus-message-adapter dir is in an unexpected place,
   // so tell the adapter where to find it
@@ -377,8 +372,9 @@ async function runServiceFromActivity(options) {
   let counter = 1;
   while (runForever) {
     logMessage('info', `[${counter}] Getting tasks from ${activityArn}`);
+    let activity;
     try {
-      const activity = await getActivityTask(activityArn);
+      activity = await getActivityTask(activityArn);
       if (activity) {
         await handlePollResponse(
           activity.event,
@@ -390,8 +386,14 @@ async function runServiceFromActivity(options) {
     }
     catch (e) {
       logError('Task failed. trying again', e);
+      if (activity) {
+        await sendTaskFailure(activity.token, e);
+      }
     }
     counter += 1;
+    if (options.runForever !== null && options.runForever !== undefined) {
+      runForever = options.runForever;
+    }
   }
 }
 

@@ -9,7 +9,7 @@ import nock from 'nock';
 import sinon from 'sinon';
 import AWS from 'aws-sdk';
 import archiver from 'archiver';
-import { runTask } from '../index';
+import { runTask, runServiceFromActivity } from '../index';
 
 
 test.beforeEach(async (t) => {
@@ -83,4 +83,76 @@ test.serial('test failed task run', async (t) => {
   });
   const error = await t.throws(promise);
   t.is(error, event.error);
+});
+
+test.serial('test activity success', async (t) => {
+  const input = {
+    msg: 'this was a success'
+  };
+  const token = 'some token';
+
+  const sf = sinon.stub(AWS, 'StepFunctions')
+    .returns({
+      getActivityTask: () => ({
+        promise: async () => ({
+          taskToken: token,
+          input: JSON.stringify(input)
+        })
+      }),
+      sendTaskSuccess: (msg) => ({
+        promise: () => {
+          t.is(msg.output, JSON.stringify(input));
+          t.is(msg.taskToken, token);
+          return Promise.resolve();
+        }
+      })
+    });
+
+  await runServiceFromActivity({
+    lambdaArn: 'test',
+    activityArn: 'test',
+    taskDirectory: t.context.taskDirectory,
+    workDirectory: t.context.workDirectory,
+    runForever: false
+  });
+
+  sf.restore();
+});
+
+test.serial('test activity failure', async (t) => {
+  const input = {
+    msg: 'this was a failure',
+    error: {
+      name: 'failure',
+      message: 'it failed'
+    }
+  };
+  const token = 'some token';
+
+  const sf = sinon.stub(AWS, 'StepFunctions')
+    .returns({
+      getActivityTask: () => ({
+        promise: async () => ({
+          taskToken: token,
+          input: JSON.stringify(input)
+        })
+      }),
+      sendTaskFailure: (msg) => ({
+        promise: () => {
+          t.is(msg.error, input.error.name);
+          t.is(msg.cause, input.error.message);
+          return Promise.resolve();
+        }
+      })
+    });
+
+  await runServiceFromActivity({
+    lambdaArn: 'test',
+    activityArn: 'test',
+    taskDirectory: t.context.taskDirectory,
+    workDirectory: t.context.workDirectory,
+    runForever: false
+  });
+
+  sf.restore();
 });
