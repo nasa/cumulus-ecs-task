@@ -14,4 +14,4 @@ WORKDIR /home/service
 
 RUN npm install
 
-ENTRYPOINT [ "node", "--harmony", "bin/service.js" ]
+ENTRYPOINT [ "./bin/start.sh" ]
