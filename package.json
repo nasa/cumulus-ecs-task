@@ -22,7 +22,6 @@
   "dependencies": {
     "aws-sdk": "^2.203.0",
     "cliclopts": "^1.1.1",
-    "got": "^9.2.2",
     "lodash": "^4.17.5",
     "minimist": "^1.2.0",
     "respawn": "^2.5.0",

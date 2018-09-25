@@ -1,10 +1,10 @@
 'use strict';
 /* eslint-disable no-console, max-len */
+const https = require('https');
 const path = require('path');
 const execSync = require('child_process').execSync;
 const assert = require('assert');
 const pRetry = require('p-retry');
-const got = require('got');
 
 const AWS = require('aws-sdk');
 const fs = require('fs');
@@ -57,14 +57,16 @@ function logError(message, err) {
  * @returns {Promise<undefined>} resolves when file has been downloaded
  */
 function tryToDownloadFile(url, destinationFilename) {
-  return new Promise((resolve, reject) => {
-    const outputFile = fs.createWriteStream(destinationFilename)
-      .on('finish', resolve)
-      .on('error', reject);
+  const file = fs.createWriteStream(destinationFilename);
 
-    got.stream(url)
-      .on('error', reject)
-      .pipe(outputFile);
+  return new Promise((resolve, reject) => {
+    file.on('error', reject);
+    file.on('finish', () => file.close());
+    file.on('close', resolve);
+
+    return https
+      .get(url, (res) => res.pipe(file))
+      .on('error', reject);
   });
 }
 
