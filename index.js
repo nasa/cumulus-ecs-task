@@ -4,6 +4,7 @@ const https = require('https');
 const path = require('path');
 const execSync = require('child_process').execSync;
 const assert = require('assert');
+const pRetry = require('p-retry');
 
 const AWS = require('aws-sdk');
 const fs = require('fs');
@@ -49,6 +50,49 @@ function logError(message, err) {
 }
 
 /**
+ * Download a URL to file
+ *
+ * @param {string} url - the URL to fetch
+ * @param {string} destinationFilename - the filename to write the file to
+ * @returns {Promise<undefined>} resolves when file has been downloaded
+ */
+function tryToDownloadFile(url, destinationFilename) {
+  const file = fs.createWriteStream(destinationFilename);
+
+  return new Promise((resolve, reject) => {
+    file.on('error', reject);
+    file.on('finish', () => file.close());
+    file.on('close', resolve);
+
+    return https
+      .get(url, (res) => res.pipe(file))
+      .on('error', reject);
+  });
+}
+
+/**
+ * Download a URL and save it to a file.  If an ETIMEDOUT error is received,
+ * retry the download with an incremental backoff.
+ *
+ * @param {string} url - the URL to fetch
+ * @param {string} destinationFilename - the filename to write the file to
+ * @returns {Promise<undefined>} resolves when file has been downloaded
+ */
+function downloadFile(url, destinationFilename) {
+  return pRetry(() =>
+    tryToDownloadFile(url, destinationFilename)
+      .catch((err) => {
+        if (err.code === 'ETIMEDOUT') {
+          throw err;
+        }
+
+        throw new pRetry.AbortError(err);
+      }
+    )
+  );
+}
+
+/**
 * Download the zip file of a lambda function from AWS
 *
 * @param {string} arn - the arn of the lambda function
@@ -71,15 +115,14 @@ async function getLambdaZip(arn, workDir) {
   const moduleFunctionName = moduleFn[1];
 
   const filepath = path.join(workDir, 'fn.zip');
-  const file = fs.createWriteStream(filepath);
 
-  return new Promise((resolve, reject) => {
-    file.on('error', reject);
-    file.on('finish', () => file.close());
-    file.on('close', () => resolve({ filepath, moduleFileName, moduleFunctionName }));
+  await downloadFile(codeUrl, filepath);
 
-    return https.get(codeUrl, (res) => res.pipe(file));
-  });
+  return {
+    filepath,
+    moduleFileName,
+    moduleFunctionName
+  };
 }
 
 /**

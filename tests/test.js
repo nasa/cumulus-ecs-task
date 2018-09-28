@@ -1,4 +1,3 @@
-/* eslint-disable no-param-reassign */
 'use strict';
 
 import os from 'os';
@@ -10,7 +9,6 @@ import sinon from 'sinon';
 import AWS from 'aws-sdk';
 import archiver from 'archiver';
 import { runTask, runServiceFromActivity } from '../index';
-
 
 test.beforeEach(async (t) => {
   t.context.tempDir = path.join(os.tmpdir(), 'cumulus-ecs-task', `${Date.now()}`, path.sep);
@@ -32,8 +30,10 @@ test.beforeEach(async (t) => {
     archive.finalize();
   });
 
+  t.context.lambdaZipUrlPath = '/lambda';
+
   nock('https://example.com')
-    .get('/lambda')
+    .get(t.context.lambdaZipUrlPath)
     .reply(200, () => fs.createReadStream(t.context.lambdaZip));
 
   t.context.expectedOutput = [
@@ -45,7 +45,7 @@ test.beforeEach(async (t) => {
       getFunction: () => ({
         promise: async () => ({
           Code: {
-            Location: 'https://example.com/lambda'
+            Location: `https://example.com${t.context.lambdaZipUrlPath}`
           },
           Configuration: {
             Handler: t.context.expectedOutput.join('.')
@@ -56,6 +56,7 @@ test.beforeEach(async (t) => {
 });
 
 test.afterEach.always((t) => {
+  nock.cleanAll();
   t.context.stub.restore();
   fs.removeSync(t.context.tempDir);
 });
@@ -155,4 +156,28 @@ test.serial('test activity failure', async (t) => {
   });
 
   sf.restore();
+});
+
+test.serial('Retry zip download if connection-timeout received', async (t) => {
+  nock.cleanAll();
+
+  const timeoutFailure = nock('https://example.com')
+    .get(t.context.lambdaZipUrlPath)
+      .replyWithError({ code: 'ETIMEDOUT' });
+
+  nock('https://example.com')
+    .get(t.context.lambdaZipUrlPath)
+      .reply(200, () => fs.createReadStream(t.context.lambdaZip));
+
+  const event = { hi: 'bye' };
+
+  const output = await runTask({
+    lambdaArn: 'fakearn',
+    lambdaInput: event,
+    taskDirectory: t.context.taskDirectory,
+    workDirectory: t.context.workDirectory
+  });
+
+  t.true(timeoutFailure.isDone());
+  t.deepEqual(event, output);
 });
