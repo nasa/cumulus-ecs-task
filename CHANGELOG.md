@@ -6,6 +6,12 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/) and this p
 
 ## [Unreleased]
 
+## [v1.2.1]
+
+### Fixed
+- **CUMULUS-937** - If a connection timeout is received when trying to download
+  the lambda function's zip file from S3, the download will be retried.
+
 ## [v1.2.0]
 
 ### Added
@@ -32,7 +38,7 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/) and this p
 
 ## [v1.1.1] - 2018-04-23
 ### Fixed
-- Fix a bug where the ecs task did not start correctly [CUMULUS-519] 
+- Fix a bug where the ecs task did not start correctly [CUMULUS-519]
 
 ## [v1.1.0] - 2018-04-12
 - Upgrade node version to node 8.11
