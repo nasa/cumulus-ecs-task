@@ -6,6 +6,11 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/) and this p
 
 ## [Unreleased]
 
+## [v1.2.2]
+
+### Fixed
+- **CUMULUS-933** - Add a sender field to logs
+
 ## [v1.2.1]
 
 ### Fixed

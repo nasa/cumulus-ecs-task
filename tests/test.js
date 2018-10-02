@@ -65,7 +65,7 @@ test.serial('test successful task run', async (t) => {
   const event = { hi: 'bye' };
 
   const output = await runTask({
-    lambdaArn: 'fakearn',
+    lambdaArn: 'arn:aws:lambda:region:account-id:function:fake-function',
     lambdaInput: event,
     taskDirectory: t.context.taskDirectory,
     workDirectory: t.context.workDirectory
@@ -77,7 +77,7 @@ test.serial('test successful task run', async (t) => {
 test.serial('test failed task run', async (t) => {
   const event = { hi: 'bye', error: 'it failed' };
   const promise = runTask({
-    lambdaArn: 'fakearn',
+    lambdaArn: 'arn:aws:lambda:region:account-id:function:fake-function',
     lambdaInput: event,
     taskDirectory: t.context.taskDirectory,
     workDirectory: t.context.workDirectory
@@ -172,7 +172,7 @@ test.serial('Retry zip download if connection-timeout received', async (t) => {
   const event = { hi: 'bye' };
 
   const output = await runTask({
-    lambdaArn: 'fakearn',
+    lambdaArn: 'arn:aws:lambda:region:account-id:function:fake-function',
     lambdaInput: event,
     taskDirectory: t.context.taskDirectory,
     workDirectory: t.context.workDirectory
