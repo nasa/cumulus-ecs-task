@@ -12,7 +12,6 @@ const fs = require('fs');
 const region = process.env.AWS_DEFAULT_REGION || 'us-east-1';
 AWS.config.update({ region: region });
 
-
 /**
  * Constructs JSON to log and logs it
  *
@@ -21,11 +20,15 @@ AWS.config.update({ region: region });
  * @returns {undefined} - log is printed to stdout, nothing is returned
  */
 function logMessage(level, message) {
-  const time = new Date();
+  if (!process.env.LAMBDA_FUNCTION_NAME) {
+    throw new Error('logMessage expected LAMBDA_FUNCTION_NAME to be set');
+  }
+
   const output = {
     level,
-    timestamp: time.toISOString(),
-    message
+    message,
+    timestamp: (new Date()).toISOString(),
+    sender: `cumulus-ecs-task/${process.env.LAMBDA_FUNCTION_NAME}`
   };
 
   console.log(JSON.stringify(output));
@@ -286,6 +289,10 @@ async function runTask(options) {
   const taskDir = options.taskDirectory;
   const workDir = options.workDirectory;
 
+  // Set LAMBDA_FUNCTION_NAME for use by logMessage
+  const lambdaFunctionName = lambdaArn.match(/:function:([^:]+)/)[1];
+  process.env.LAMBDA_FUNCTION_NAME = lambdaFunctionName;
+
   // the cumulus-message-adapter dir is in an unexpected place,
   // so tell the adapter where to find it
   process.env.CUMULUS_MESSAGE_ADAPTER_DIR = `${taskDir}/cumulus-message-adapter/`;
@@ -331,6 +338,10 @@ async function runServiceFromSQS(options) {
   const taskDir = options.taskDirectory;
   const workDir = options.workDirectory;
   const runForever = options.runForever || true;
+
+  // Set LAMBDA_FUNCTION_NAME for use by logMessage
+  const lambdaFunctionName = lambdaArn.match(/:function:([^:]+)/)[1];
+  process.env.LAMBDA_FUNCTION_NAME = lambdaFunctionName;
 
   // the cumulus-message-adapter dir is in an unexpected place,
   // so tell the adapter where to find it
