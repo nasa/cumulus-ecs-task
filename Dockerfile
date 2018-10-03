@@ -12,6 +12,6 @@ RUN chown -R service:service /home/service
 
 WORKDIR /home/service
 
-RUN npm install
+RUN npm install --production
 
 ENTRYPOINT [ "./bin/start.sh" ]
