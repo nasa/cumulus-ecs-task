@@ -9,48 +9,11 @@ const pRetry = require('p-retry');
 const AWS = require('aws-sdk');
 const fs = require('fs');
 
+const Logger = require('./Logger');
+const log = new Logger();
+
 const region = process.env.AWS_DEFAULT_REGION || 'us-east-1';
 AWS.config.update({ region: region });
-
-/**
- * Constructs JSON to log and logs it
- *
- * @param {string} level - type of log (trace, debug, info, warn, error, fatal)
- * @param {string} message - message to log
- * @returns {undefined} - log is printed to stdout, nothing is returned
- */
-function logMessage(level, message) {
-  if (!process.env.LAMBDA_FUNCTION_NAME) {
-    throw new Error('logMessage expected LAMBDA_FUNCTION_NAME to be set');
-  }
-
-  const output = {
-    level,
-    message,
-    timestamp: (new Date()).toISOString(),
-    sender: `cumulus-ecs-task/${process.env.LAMBDA_FUNCTION_NAME}`
-  };
-
-  console.log(JSON.stringify(output));
-}
-
-/**
- *
- * @param {string} message - message to log
- * @param {Error} err - Error object
- * @returns {undefined} - log is printed to stdout, nothing is returned
- */
-function logError(message, err) {
-  // error stack with newlines and no leading space or tab will result in separate log entry
-  let msg;
-  if (err.stack) {
-    msg = `${message} ${err.stack.replace(/\n/g, ' ')}`;
-  }
-  else {
-    msg = err;
-  }
-  logMessage('error', msg);
-}
 
 /**
  * Download a URL to file
@@ -156,9 +119,9 @@ function startHeartbeat(taskToken) {
   return setInterval(() => {
     sf.sendTaskHeartbeat({ taskToken }, (err) => {
       if (err) {
-        logError('error sending heartbeat', err);
+        log.error('error sending heartbeat', err);
       }
-      logMessage('info', `sending heartbeat, confirming ${taskToken} is still in progress`);
+      log.info(`sending heartbeat, confirming ${taskToken} is still in progress`);
     }, 60000);
   });
 }
@@ -214,7 +177,7 @@ async function getActivityTask(activityArn) {
       token
     };
   }
-  logMessage('info', 'No tasks in the activity queue');
+  log.info('No tasks in the activity queue');
   return undefined;
 }
 
@@ -284,28 +247,34 @@ async function runTask(options) {
   assert(options && typeof options.lambdaInput === 'object', 'options.lambdaInput object is required');
   assert(options.taskDirectory && typeof options.taskDirectory === 'string', 'options.taskDirectory string is required');
   assert(options.workDirectory && typeof options.workDirectory === 'string', 'options.workDirectory string is required');
+
   const lambdaArn = options.lambdaArn;
   const event = options.lambdaInput;
   const taskDir = options.taskDirectory;
   const workDir = options.workDirectory;
 
-  // Set LAMBDA_FUNCTION_NAME for use by logMessage
-  const lambdaFunctionName = lambdaArn.match(/:function:([^:]+)/)[1];
-  process.env.LAMBDA_FUNCTION_NAME = lambdaFunctionName;
+  const lambdaFunctionNameMatch = lambdaArn.match(/:function:([^:]+)/);
+  if (lambdaFunctionNameMatch) {
+    log.sender = `cumulus-ecs-task/${lambdaFunctionNameMatch[1]}`;
+  }
+  else {
+    const err = new TypeError(`Unable to determine lambda function name from ${lambdaArn}`);
+    log.error(`Unable to determine lambda function name from ${lambdaArn}`, err);
+  }
 
   // the cumulus-message-adapter dir is in an unexpected place,
   // so tell the adapter where to find it
   process.env.CUMULUS_MESSAGE_ADAPTER_DIR = `${taskDir}/cumulus-message-adapter/`;
 
-  logMessage('info', 'Downloading the Lambda function');
+  log.info('Downloading the Lambda function');
   try {
     const handler = await downloadLambdaHandler(lambdaArn, workDir, taskDir);
     const output = await handleResponse(event, handler);
-    logMessage('info', 'task executed successfully');
+    log.info('task executed successfully');
     return output;
   }
   catch (e) {
-    logError('task failed with an error', e);
+    log.error('task failed with an error', e);
     throw e;
   }
 }
@@ -339,20 +308,25 @@ async function runServiceFromSQS(options) {
   const workDir = options.workDirectory;
   const runForever = options.runForever || true;
 
-  // Set LAMBDA_FUNCTION_NAME for use by logMessage
-  const lambdaFunctionName = lambdaArn.match(/:function:([^:]+)/)[1];
-  process.env.LAMBDA_FUNCTION_NAME = lambdaFunctionName;
+  const lambdaFunctionNameMatch = lambdaArn.match(/:function:([^:]+)/);
+  if (lambdaFunctionNameMatch) {
+    log.sender = `cumulus-ecs-task/${lambdaFunctionNameMatch[1]}`;
+  }
+  else {
+    const err = new TypeError(`Unable to determine lambda function name from ${lambdaArn}`);
+    log.error(`Unable to determine lambda function name from ${lambdaArn}`, err);
+  }
 
   // the cumulus-message-adapter dir is in an unexpected place,
   // so tell the adapter where to find it
   process.env.CUMULUS_MESSAGE_ADAPTER_DIR = `${taskDir}/cumulus-message-adapter/`;
 
-  logMessage('info', 'Downloading the Lambda function');
+  log.info('Downloading the Lambda function');
   const handler = await downloadLambdaHandler(lambdaArn, workDir, taskDir);
   let counter = 1;
   while (runForever) {
     try {
-      logMessage('info', `[${counter}] Getting tasks from ${sqsUrl}`);
+      log.info(`[${counter}] Getting tasks from ${sqsUrl}`);
       const resp = await sqs.receiveMessage({
         QueueUrl: sqsUrl,
         WaitTimeSeconds: 20
@@ -362,12 +336,12 @@ async function runServiceFromSQS(options) {
         const promises = messages.map(async (message) => {
           if (message && message.Body) {
             const receipt = message.ReceiptHandle;
-            logMessage('info', 'received message from queue, executing the task');
+            log.info('received message from queue, executing the task');
             const event = JSON.parse(message.Body);
             await handleResponse(event, handler);
 
             // remove the message from queue
-            logMessage('info', `message with handler ${receipt} deleted from the queue`);
+            log.info(`message with handler ${receipt} deleted from the queue`);
             await sqs.deleteMessage({ QueueUrl: sqsUrl, ReceiptHandle: receipt }).promise();
           }
           return undefined;
@@ -375,11 +349,11 @@ async function runServiceFromSQS(options) {
         await promises;
       }
       else {
-        logMessage('info', 'There are no new messages in the queue. Polling again!');
+        log.info('There are no new messages in the queue. Polling again!');
       }
     }
     catch (e) {
-      logError('Task failed. trying again', e);
+      log.error('Task failed. trying again', e);
     }
     counter += 1;
   }
@@ -417,15 +391,24 @@ async function runServiceFromActivity(options) {
 
   let runForever = true;
 
+  const lambdaFunctionNameMatch = lambdaArn.match(/:function:([^:]+)/);
+  if (lambdaFunctionNameMatch) {
+    log.sender = `cumulus-ecs-task/${lambdaFunctionNameMatch[1]}`;
+  }
+  else {
+    const err = new TypeError(`Unable to determine lambda function name from ${lambdaArn}`);
+    log.error(`Unable to determine lambda function name from ${lambdaArn}`, err);
+  }
+
   // the cumulus-message-adapter dir is in an unexpected place,
   // so tell the adapter where to find it
   process.env.CUMULUS_MESSAGE_ADAPTER_DIR = `${taskDir}/cumulus-message-adapter/`;
 
-  logMessage('info', 'Downloading the Lambda function');
+  log.info('Downloading the Lambda function');
   const handler = await downloadLambdaHandler(lambdaArn, workDir, taskDir);
   let counter = 1;
   while (runForever) {
-    logMessage('info', `[${counter}] Getting tasks from ${activityArn}`);
+    log.info(`[${counter}] Getting tasks from ${activityArn}`);
     let activity;
     try {
       activity = await getActivityTask(activityArn);
@@ -439,7 +422,7 @@ async function runServiceFromActivity(options) {
       }
     }
     catch (e) {
-      logError('Task failed. trying again', e);
+      log.error('Task failed. trying again', e);
       if (activity) {
         await sendTaskFailure(activity.token, e);
       }
@@ -454,6 +437,5 @@ async function runServiceFromActivity(options) {
 module.exports = {
   runServiceFromActivity,
   runServiceFromSQS,
-  runTask,
-  logMessage
+  runTask
 };

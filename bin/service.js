@@ -8,11 +8,13 @@ const minimist = require('minimist');
 const createCliOptions = require('cliclopts');
 const rimraf = require('rimraf');
 
+const Logger = require('../Logger');
+const log = new Logger({ sender: 'cumulus-ecs-task/service' });
+
 const {
   runServiceFromActivity,
   runServiceFromSQS,
-  runTask,
-  logMessage
+  runTask
 } = require('../index');
 
 const taskDir = path.join(process.cwd(), 'task');
@@ -80,7 +82,7 @@ if (argv.help) {
   process.exit(0);
 }
 
-logMessage('info', 'Starting the cumulus-ecs-task runner ...');
+log.info('Starting the cumulus-ecs-task runner ...');
 
 rimraf.sync(argv.taskDirectory);
 rimraf.sync(argv.workDirectory);
@@ -99,15 +101,12 @@ else if (argv.lambdaInput) {
   runTask(argv).catch(console.error);
 }
 else {
-  logMessage(
-    'error',
-    'You must provider one of the following options: activity-arn, sqs-url, lambda-input'
-  );
+  log.error('You must provider one of the following options: activity-arn, sqs-url, lambda-input');
   process.exit(1);
 }
 
 process.on('SIGINT', () => {
-  logMessage('info', 'Doing some cleanup work before quitting!');
+  log.info('Doing some cleanup work before quitting!');
   rimraf.sync(argv.workDirectory);
   process.exit();
 });

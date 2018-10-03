@@ -1,0 +1,14 @@
+/.circleci/
+/.dockerignore
+/.eslint*
+/.git/
+/.gitignore
+/.nvmrc
+/*.md
+/Dockerfile
+/LICENSE
+/node_modules/
+/package-lock.json
+/README.md
+/tests/
+/yarn.lock
