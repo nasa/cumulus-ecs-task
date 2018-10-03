@@ -6,6 +6,13 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/) and this p
 
 ## [Unreleased]
 
+## [v1.2.3]
+
+### Fixed
+- **CUMULUS-933**
+  - Fixed additional cases where logs were being written without a sender field.
+  - Moved logging to a Logger class
+
 ## [v1.2.2]
 
 ### Fixed
