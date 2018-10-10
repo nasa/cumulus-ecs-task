@@ -6,6 +6,12 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/) and this p
 
 ## [Unreleased]
 
+## [v1.2.4]
+
+### Fixed
+- **CUMULUS-953** - The lambdaArn parameter will accept a Lambda ARN or a Lambda
+  function name.
+
 ## [v1.2.3]
 
 ### Fixed
