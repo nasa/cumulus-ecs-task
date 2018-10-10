@@ -1,5 +1,7 @@
+/* eslint max-len: "off" */
+
 'use strict';
-/* eslint-disable no-console, max-len */
+
 const https = require('https');
 const path = require('path');
 const execSync = require('child_process').execSync;
@@ -14,6 +16,21 @@ const log = new Logger();
 
 const region = process.env.AWS_DEFAULT_REGION || 'us-east-1';
 AWS.config.update({ region: region });
+
+// eslint-disable-next-line require-jsdoc
+const isLambdaFunctionArn = (id) => id.startsWith('arn:aws:lambda');
+
+// eslint-disable-next-line require-jsdoc
+function getFunctionName(lambdaId) {
+  if (isLambdaFunctionArn(lambdaId)) {
+    const FUNCTION_NAME_FIELD = 6;
+
+    return lambdaId.split(':')[FUNCTION_NAME_FIELD];
+  }
+  else {
+    return lambdaId;
+  }
+}
 
 /**
  * Download a URL to file
@@ -253,14 +270,7 @@ async function runTask(options) {
   const taskDir = options.taskDirectory;
   const workDir = options.workDirectory;
 
-  const lambdaFunctionNameMatch = lambdaArn.match(/:function:([^:]+)/);
-  if (lambdaFunctionNameMatch) {
-    log.sender = `cumulus-ecs-task/${lambdaFunctionNameMatch[1]}`;
-  }
-  else {
-    const err = new TypeError(`Unable to determine lambda function name from ${lambdaArn}`);
-    log.error(`Unable to determine lambda function name from ${lambdaArn}`, err);
-  }
+  log.sender = `cumulus-ecs-task/${getFunctionName(lambdaArn)}`;
 
   // the cumulus-message-adapter dir is in an unexpected place,
   // so tell the adapter where to find it
@@ -308,14 +318,7 @@ async function runServiceFromSQS(options) {
   const workDir = options.workDirectory;
   const runForever = options.runForever || true;
 
-  const lambdaFunctionNameMatch = lambdaArn.match(/:function:([^:]+)/);
-  if (lambdaFunctionNameMatch) {
-    log.sender = `cumulus-ecs-task/${lambdaFunctionNameMatch[1]}`;
-  }
-  else {
-    const err = new TypeError(`Unable to determine lambda function name from ${lambdaArn}`);
-    log.error(`Unable to determine lambda function name from ${lambdaArn}`, err);
-  }
+  log.sender = `cumulus-ecs-task/${getFunctionName(lambdaArn)}`;
 
   // the cumulus-message-adapter dir is in an unexpected place,
   // so tell the adapter where to find it
@@ -391,14 +394,7 @@ async function runServiceFromActivity(options) {
 
   let runForever = true;
 
-  const lambdaFunctionNameMatch = lambdaArn.match(/:function:([^:]+)/);
-  if (lambdaFunctionNameMatch) {
-    log.sender = `cumulus-ecs-task/${lambdaFunctionNameMatch[1]}`;
-  }
-  else {
-    const err = new TypeError(`Unable to determine lambda function name from ${lambdaArn}`);
-    log.error(`Unable to determine lambda function name from ${lambdaArn}`, err);
-  }
+  log.sender = `cumulus-ecs-task/${getFunctionName(lambdaArn)}`;
 
   // the cumulus-message-adapter dir is in an unexpected place,
   // so tell the adapter where to find it
