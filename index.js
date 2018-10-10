@@ -27,9 +27,8 @@ function getFunctionName(lambdaId) {
 
     return lambdaId.split(':')[FUNCTION_NAME_FIELD];
   }
-  else {
-    return lambdaId;
-  }
+
+  return lambdaId;
 }
 
 /**
