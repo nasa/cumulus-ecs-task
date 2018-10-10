@@ -31,6 +31,10 @@ function getFunctionName(lambdaId) {
   return lambdaId;
 }
 
+// eslint-disable-next-line require-jsdoc
+const getLogSenderFromLambdaId = (lambdaId) =>
+  `cumulus-ecs-task/${getFunctionName(lambdaId)}`;
+
 /**
  * Download a URL to file
  *
@@ -269,7 +273,7 @@ async function runTask(options) {
   const taskDir = options.taskDirectory;
   const workDir = options.workDirectory;
 
-  log.sender = `cumulus-ecs-task/${getFunctionName(lambdaArn)}`;
+  log.sender = getLogSenderFromLambdaId(lambdaArn);
 
   // the cumulus-message-adapter dir is in an unexpected place,
   // so tell the adapter where to find it
@@ -317,7 +321,7 @@ async function runServiceFromSQS(options) {
   const workDir = options.workDirectory;
   const runForever = options.runForever || true;
 
-  log.sender = `cumulus-ecs-task/${getFunctionName(lambdaArn)}`;
+  log.sender = getLogSenderFromLambdaId(lambdaArn);
 
   // the cumulus-message-adapter dir is in an unexpected place,
   // so tell the adapter where to find it
@@ -393,7 +397,7 @@ async function runServiceFromActivity(options) {
 
   let runForever = true;
 
-  log.sender = `cumulus-ecs-task/${getFunctionName(lambdaArn)}`;
+  log.sender = getLogSenderFromLambdaId(lambdaArn);
 
   // the cumulus-message-adapter dir is in an unexpected place,
   // so tell the adapter where to find it
