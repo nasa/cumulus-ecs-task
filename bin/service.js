@@ -110,3 +110,7 @@ process.on('SIGINT', () => {
   rimraf.sync(argv.workDirectory);
   process.exit();
 });
+
+process.on('SIGTERM', () => {
+  log.info('Received SIGTERM, ignoring signal and continuing with task...');
+});
