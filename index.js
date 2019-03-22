@@ -329,8 +329,15 @@ async function runServiceFromSQS(options) {
 
   log.info('Downloading the Lambda function');
   const handler = await downloadLambdaHandler(lambdaArn, workDir, taskDir);
+
+  let sigTermReceived = false;
+  process.on('SIGTERM', () => {
+    log.info('Received SIGTERM, will stop polling for new work');
+    sigTermReceived = true;
+  });
+
   let counter = 1;
-  while (runForever) {
+  do {
     try {
       log.info(`[${counter}] Getting tasks from ${sqsUrl}`);
       const resp = await sqs.receiveMessage({
@@ -362,7 +369,7 @@ async function runServiceFromSQS(options) {
       log.error('Task failed. trying again', e);
     }
     counter += 1;
-  }
+  } while (runForever && !sigTermReceived);
 }
 
 /**
@@ -405,8 +412,15 @@ async function runServiceFromActivity(options) {
 
   log.info('Downloading the Lambda function');
   const handler = await downloadLambdaHandler(lambdaArn, workDir, taskDir);
+
+  let sigTermReceived = false;
+  process.on('SIGTERM', () => {
+    log.info('Received SIGTERM, will stop polling for new work');
+    sigTermReceived = true;
+  });
+
   let counter = 1;
-  while (runForever) {
+  do {
     log.info(`[${counter}] Getting tasks from ${activityArn}`);
     let activity;
     try {
@@ -430,7 +444,7 @@ async function runServiceFromActivity(options) {
     if (options.runForever !== null && options.runForever !== undefined) {
       runForever = options.runForever;
     }
-  }
+  } while (runForever && !sigTermReceived);
 }
 
 module.exports = {
