@@ -6,6 +6,8 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/) and this p
 
 ## [Unreleased]
 
+## [v1.2.5]
+
 ### Fixed
 - **CUMULUS-802** - Stop polling for new work if a SIGTERM is received
 
@@ -75,7 +77,8 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/) and this p
 ### Added
 - Initial release
 
-[Unreleased]: https://github.com/nasa/cumulus-ecs-task/compare/v1.2.0...HEAD
+[Unreleased]: https://github.com/nasa/cumulus-ecs-task/compare/v1.2.5...HEAD
+[v1.2.5]: https://github.com/nasa/cumulus-ecs-task/compare/v1.2.4...v1.2.5
 [v1.1.2]: https://github.com/nasa/cumulus-ecs-task/compare/v1.1.2...v1.2.0
 [v1.1.2]: https://github.com/nasa/cumulus-ecs-task/compare/v1.1.1...v1.1.2
 [v1.1.1]: https://github.com/nasa/cumulus-ecs-task/compare/v1.1.0...v1.1.1

@@ -1,17 +1,20 @@
-FROM node:8.11.0
+FROM node:8.10.0
 
-USER root
-RUN apt-get update
-RUN apt-get install -y unzip
+RUN apt-get update && apt-get install -y unzip
 
-COPY . /home/service
+RUN npm install -g npm@latest
 
 RUN groupadd -r service -g 433
 RUN useradd -u 431 -r -g service -d /home/service -s /sbin/nologin -c "Docker image user" service
-RUN chown -R service:service /home/service
 
 WORKDIR /home/service
 
-RUN npm install --production
+COPY package.json package-lock.json /home/service/
+RUN chown -R service:service /home/service
 
-ENTRYPOINT [ "./bin/start.sh" ]
+RUN npm ci
+
+COPY . /home/service
+RUN chown -R service:service /home/service
+
+ENTRYPOINT ["node", "./bin/service.js"]

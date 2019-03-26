@@ -3,6 +3,7 @@
 'use strict';
 
 const https = require('https');
+const isBoolean = require('lodash.isboolean');
 const path = require('path');
 const execSync = require('child_process').execSync;
 const assert = require('assert');
@@ -319,7 +320,7 @@ async function runServiceFromSQS(options) {
   const sqsUrl = options.sqsUrl;
   const taskDir = options.taskDirectory;
   const workDir = options.workDirectory;
-  const runForever = options.runForever || true;
+  const runForever = isBoolean(options.runForever) ? options.runForever : true;
 
   log.sender = getLogSenderFromLambdaId(lambdaArn);
 
@@ -370,6 +371,8 @@ async function runServiceFromSQS(options) {
     }
     counter += 1;
   } while (runForever && !sigTermReceived);
+
+  log.info('Exiting');
 }
 
 /**
@@ -402,7 +405,7 @@ async function runServiceFromActivity(options) {
   const workDir = options.workDirectory;
   const heartbeatInterval = options.heartbeat;
 
-  let runForever = true;
+  const runForever = isBoolean(options.runForever) ? options.runForever : true;
 
   log.sender = getLogSenderFromLambdaId(lambdaArn);
 
@@ -441,10 +444,9 @@ async function runServiceFromActivity(options) {
       }
     }
     counter += 1;
-    if (options.runForever !== null && options.runForever !== undefined) {
-      runForever = options.runForever;
-    }
   } while (runForever && !sigTermReceived);
+
+  log.info('Exiting');
 }
 
 module.exports = {
