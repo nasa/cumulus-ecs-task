@@ -14,11 +14,11 @@ When included in a Cumulus workflow and deployed to AWS, it will download a spec
 
 ## Compatibility
 
-This only works with Node.js Lmabda functions, and requires that the Lambda function it is running has a dependency of at least v1.0.1 of [cumulus-message-adapter-js](https://github.com/cumulus-nasa/cumulus-message-adapter-js).
+This only works with Node.js Lambda functions, and requires that the Lambda function it is running has a dependency of at least v1.0.1 of [cumulus-message-adapter-js](https://github.com/cumulus-nasa/cumulus-message-adapter-js).
 
 ## Usage
 
-Like other Cumulus libraries, cumulus-ecs-task is designed to be deployed to AWS using [kes](https://github.com/developmentseed/kes) to manage Cloudformation config. This documentation assumes you're working with a Cumulus deployment and that you have files and directory stucture similar to what's found in the [cumulus template repository](https://github.com/cumulus-nasa/template-deploy).
+Like other Cumulus libraries, cumulus-ecs-task is designed to be deployed to AWS using [kes](https://github.com/developmentseed/kes) to manage Cloudformation config. This documentation assumes you're working with a Cumulus deployment and that you have files and directory structure similar to what's found in the [cumulus template repository](https://github.com/cumulus-nasa/template-deploy).
 
 Most importantly, we'll need to edit these files:
 
@@ -61,7 +61,7 @@ We'll define that activity in the app/config.yml file.
 
 ### ECS cluster configuration
 
-In order for an ECS cluster to be created as a part of your deployment stack, ensure you have the folowing in your `config.yml`:
+In order for an ECS cluster to be created as a part of your deployment stack, ensure you have the following in your `config.yml`:
 
 * An `ecs` config object (detailed in following section)
 * vpc.vpcId and vpc.subnets
