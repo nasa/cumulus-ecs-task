@@ -1,17 +1,23 @@
-FROM node:8.11.0
+FROM node:8.10-alpine
 
-USER root
-RUN apt-get update
-RUN apt-get install -y unzip
+RUN npm install -g npm@latest
 
-COPY . /home/service
+RUN apk update && \
+  apk add unzip && \
+  apk add python2 && \
+  rm -rf /var/cache/apk
 
-RUN groupadd -r service -g 433
-RUN useradd -u 431 -r -g service -d /home/service -s /sbin/nologin -c "Docker image user" service
-RUN chown -R service:service /home/service
+RUN addgroup -S -g 433 service
+RUN adduser -S -u 431 -G service -h /home/service -s /sbin/nologin service
 
 WORKDIR /home/service
 
-RUN npm install --production
+COPY package.json package-lock.json /home/service/
+RUN chown service:service /home/service/package*.json
 
-ENTRYPOINT [ "./bin/start.sh" ]
+RUN npm ci --production
+
+COPY . /home/service/
+RUN chown -R service:service /home/service
+
+ENTRYPOINT ["node", "./bin/service.js"]
