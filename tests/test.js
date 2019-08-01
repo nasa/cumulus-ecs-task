@@ -10,6 +10,10 @@ import AWS from 'aws-sdk';
 import archiver from 'archiver';
 import { runTask, runServiceFromActivity } from '../index';
 
+const { promisify } = require('util');
+const { exec } = require('child_process');
+const execPromise = promisify(exec);
+
 test.beforeEach(async (t) => {
   t.context.tempDir = path.join(os.tmpdir(), 'cumulus-ecs-task', `${Date.now()}`, path.sep);
   fs.mkdirpSync(t.context.tempDir);
@@ -55,10 +59,15 @@ test.beforeEach(async (t) => {
     output.on('error', reject);
     archive.pipe(output);
     archive.file(path.join(__dirname, 'data/fakeLambda.js'), { name: 'fakeLambda.js' });
-    archive.file(path.join(__dirname, 'data/cumulus-message-adapter'),
-     { name: 'cumulus-message-adapter' });
+    archive.file(path.join(__dirname, 'data/cumulus-message-adapter'), { name: 'cumulus-message-adapter' });
     archive.finalize();
   });
+
+  const promiseOutput = await execPromise(`ls -l ${path.join(__dirname, 'data')}`);
+  const zipOutput = await execPromise(`unzip -l ${t.context.lambdaCMAZip}`);
+
+  console.log(`Zip output is ${JSON.stringify(zipOutput)}`);
+  console.log(`Directory output is ${JSON.stringify(promiseOutput)}`);
 
   t.context.lambdaZipUrlPath = '/lambda';
   t.context.getLayerUrlPath = '/getLayer';
