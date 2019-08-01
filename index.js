@@ -19,7 +19,7 @@ const Logger = require('./Logger');
 const log = new Logger();
 
 const region = process.env.AWS_DEFAULT_REGION || 'us-east-1';
-const layersDirectory = '/opt/';
+const layersDefaultDirectory = '/opt/';
 
 AWS.config.update({ region: region });
 
@@ -45,7 +45,6 @@ function getFunctionName(lambdaId) {
  */
 function tryToDownloadFile(url, destinationFilename) {
   const file = fs.createWriteStream(destinationFilename);
-
   return new Promise((resolve, reject) => {
     file.on('error', reject);
     file.on('finish', () => file.close());
@@ -103,14 +102,15 @@ async function downloadLayers(layers, layerPath) {
 * Download the zip file of a lambda function from AWS
 *
 * @param {string} arn - the arn of the lambda function
-* @param {strind} workDir - the dir to download the lambda function to
+* @param {string} workDir - the dir to download the lambda function to
+* @param {string} layersDirectory - the dir layers will be extracted to
 * @returns {Promise<Object>} returns an object that includes `filepath`,
 * `moduleFileName`, `moduleFunctionName` arguments.
 * The `filepath` is the path to the zip file of the lambda function.
 * The `moduleFileName` is the filename of the node module.
 * The `moduleFunctionName` is the name of the exported function to call in the module.
 **/
-async function getLambdaZip(arn, workDir) {
+async function getLambdaZip(arn, workDir, layersDirectory) {
   const lambda = new AWS.Lambda({ apiVersion: '2015-03-31' });
 
   const data = await lambda.getFunction({ FunctionName: arn }).promise();
@@ -152,7 +152,6 @@ function setCumulusMessageAdapterPath(taskDir, layerDir) {
   const CmaPath = `${taskDir}/cumulus-message-adapter`;
   const adapterPath = fs.existsSync(CmaPath) ? CmaPath : layerDir;
   log.info(`Setting CMA path to ${adapterPath}`);
-  console.log(`Setting CMA Path to ${adapterPath}`);
   process.env.CUMULUS_MESSAGE_ADAPTER_DIR = adapterPath;
 }
 
@@ -168,7 +167,7 @@ function setCumulusMessageAdapterPath(taskDir, layerDir) {
 *                              that will run in the ECS service
 **/
 async function downloadLambdaHandler(lambdaArn, workDir, taskDir, layerDir) {
-  const resp = await getLambdaZip(lambdaArn, workDir);
+  const resp = await getLambdaZip(lambdaArn, workDir, layerDir);
   const unzipPromises = resp.layerPaths.map((layerFilePath) => execPromise(`unzip -o ${layerFilePath} -d ${layerDir}`));
   unzipPromises.push(execPromise(`unzip -o ${resp.filepath} -d ${taskDir}`));
   await Promise.all(unzipPromises);
@@ -318,10 +317,9 @@ async function runTask(options) {
   assert(options && typeof options.lambdaInput === 'object', 'options.lambdaInput object is required');
   assert(options.taskDirectory && typeof options.taskDirectory === 'string', 'options.taskDirectory string is required');
   assert(options.workDirectory && typeof options.workDirectory === 'string', 'options.workDirectory string is required');
-  assert(!options.layersDirectory || typeof options.layersDirectory === 'string', 'options.layersDirectory should be a string')
+  assert(!options.layersDirectory || typeof options.layersDirectory === 'string', 'options.layersDirectory should be a string');
 
-  const layerExtractionDirectory = options.layersDirectory ? options.layersDirectory : '/opt/';
-
+  const layerExtractionDirectory = options.layersDirectory ? options.layersDirectory : layersDefaultDirectory;
   const lambdaArn = options.lambdaArn;
   const event = options.lambdaInput;
   const taskDir = options.taskDirectory;
@@ -362,7 +360,7 @@ async function runServiceFromSQS(options) {
   assert(options.sqsUrl && typeof options.sqsUrl === 'string', 'options.sqsUrl string is required');
   assert(options.taskDirectory && typeof options.taskDirectory === 'string', 'options.taskDirectory string is required');
   assert(options.workDirectory && typeof options.workDirectory === 'string', 'options.workDirectory string is required');
-  assert(!options.layersDirectory || typeof options.layersDirectory === 'string', 'options.layersDirectory should be a string')
+  assert(!options.layersDirectory || typeof options.layersDirectory === 'string', 'options.layersDirectory should be a string');
 
   const sqs = new AWS.SQS({ apiVersion: '2016-11-23' });
 
@@ -370,7 +368,7 @@ async function runServiceFromSQS(options) {
   const sqsUrl = options.sqsUrl;
   const taskDir = options.taskDirectory;
   const workDir = options.workDirectory;
-  const layerExtractionDirectory = options.layersDirectory ? options.layersDirectory : '/opt';
+  const layerExtractionDirectory = options.layersDirectory ? options.layersDirectory : layersDefaultDirectory;
 
   const runForever = isBoolean(options.runForever) ? options.runForever : true;
 
@@ -445,7 +443,7 @@ async function runServiceFromActivity(options) {
   assert(options.activityArn && typeof options.activityArn === 'string', 'options.activityArn string is required');
   assert(options.taskDirectory && typeof options.taskDirectory === 'string', 'options.taskDirectory string is required');
   assert(options.workDirectory && typeof options.workDirectory === 'string', 'options.workDirectory string is required');
-  assert(!options.layersDirectory || typeof options.layersDirectory === 'string', 'options.layersDirectory should be a string')
+  assert(!options.layersDirectory || typeof options.layersDirectory === 'string', 'options.layersDirectory should be a string');
 
   if (options.heartbeat) {
     assert(Number.isInteger(options.heartbeat), 'options.heartbeat must be an integer');
@@ -456,7 +454,7 @@ async function runServiceFromActivity(options) {
   const taskDir = options.taskDirectory;
   const workDir = options.workDirectory;
   const heartbeatInterval = options.heartbeat;
-  const layerExtractionDirectory = options.layersDirectory ? options.layersDirectory : '/opt';
+  const layerExtractionDirectory = options.layersDirectory ? options.layersDirectory : layersDefaultDirectory;
 
   const runForever = isBoolean(options.runForever) ? options.runForever : true;
 

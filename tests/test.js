@@ -23,6 +23,7 @@ test.beforeEach(async (t) => {
 
   fs.mkdirpSync(t.context.taskDirectory);
   fs.mkdirpSync(t.context.workDirectory);
+  fs.mkdirpSync(t.context.layerDirectory);
 
   // zip fake lambda
   await new Promise((resolve, reject) => {
@@ -54,11 +55,10 @@ test.beforeEach(async (t) => {
     output.on('error', reject);
     archive.pipe(output);
     archive.file(path.join(__dirname, 'data/fakeLambda.js'), { name: 'fakeLambda.js' });
-    archive.file(path.join(__dirname, 'data/cumulus-message-adapter'), { name: 'cumulus-message-adapter' });
+    archive.file(path.join(__dirname, 'data/cumulus-message-adapter'),
+     { name: 'cumulus-message-adapter' });
     archive.finalize();
   });
-
-
 
   t.context.lambdaZipUrlPath = '/lambda';
   t.context.getLayerUrlPath = '/getLayer';
@@ -117,25 +117,24 @@ test.serial('test successful task run', async (t) => {
     workDirectory: t.context.workDirectory,
     layersDirectory: t.context.layerDirectory
   });
-
   t.deepEqual(event, output);
 });
 
 test.serial('layers are extracted into target directory', async (t) => {
   const event = { hi: 'bye' };
-  const output = await runTask({
+  await runTask({
     lambdaArn: 'arn:aws:lambda:region:account-id:function:fake-function',
     lambdaInput: event,
     taskDirectory: t.context.taskDirectory,
     workDirectory: t.context.workDirectory,
     layersDirectory: t.context.layerDirectory
   });
-  t.true(fs.existsSync(`${t.context.layerDirectory}/fakeLayer.txt`))
-})
+  t.true(fs.existsSync(`${t.context.layerDirectory}/fakeLayer.txt`));
+});
 
 test.serial('CMA environment variable is set if CMA is not present', async (t) => {
   const event = { hi: 'bye' };
-  const output = await runTask({
+  await runTask({
     lambdaArn: 'arn:aws:lambda:region:account-id:function:fake-function',
     lambdaInput: event,
     taskDirectory: t.context.taskDirectory,
@@ -143,7 +142,7 @@ test.serial('CMA environment variable is set if CMA is not present', async (t) =
     layersDirectory: t.context.layerDirectory
   });
   t.is(process.env.CUMULUS_MESSAGE_ADAPTER_DIR, t.context.layerDirectory);
-})
+});
 
 test.serial('CMA environment variable is set if CMA is present', async (t) => {
   const event = { hi: 'bye' };
@@ -157,15 +156,16 @@ test.serial('CMA environment variable is set if CMA is present', async (t) => {
     .get(t.context.getLayerUrlPath)
       .reply(200, () => fs.createReadStream(t.context.layerZip));
 
-  const output = await runTask({
+  await runTask({
     lambdaArn: 'arn:aws:lambda:region:account-id:function:fake-function',
     lambdaInput: event,
     taskDirectory: t.context.taskDirectory,
     workDirectory: t.context.workDirectory,
     layersDirectory: t.context.layerDirectory
   });
-  t.is(process.env.CUMULUS_MESSAGE_ADAPTER_DIR, `${t.context.taskDirectory}/cumulus-message-adapter`);
-})
+  t.is(process.env.CUMULUS_MESSAGE_ADAPTER_DIR,
+    `${t.context.taskDirectory}/cumulus-message-adapter`);
+});
 
 
 test.serial('test failed task run', async (t) => {
