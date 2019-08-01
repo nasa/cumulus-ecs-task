@@ -59,7 +59,8 @@ test.beforeEach(async (t) => {
     output.on('error', reject);
     archive.pipe(output);
     archive.file(path.join(__dirname, 'data/fakeLambda.js'), { name: 'fakeLambda.js' });
-    archive.file(path.join(__dirname, 'data/cumulus-message-adapter'), { name: 'cumulus-message-adapter' });
+    archive.file(path.join(__dirname, 'data/cumulus-message-adapter'),
+      { name: 'cumulus-message-adapter' });
     archive.finalize();
   });
 
