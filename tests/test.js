@@ -276,7 +276,8 @@ test.serial('Retry zip download if connection-timeout received', async (t) => {
     lambdaArn: 'arn:aws:lambda:region:account-id:function:fake-function',
     lambdaInput: event,
     taskDirectory: t.context.taskDirectory,
-    workDirectory: t.context.workDirectory
+    workDirectory: t.context.workDirectory,
+    layersDirectory: t.context.layerDirectory,
   });
 
   t.true(timeoutFailure.isDone());
