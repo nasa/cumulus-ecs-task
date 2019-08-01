@@ -172,6 +172,8 @@ async function downloadLambdaHandler(lambdaArn, workDir, taskDir, layerDir) {
   unzipPromises.push(execPromise(`unzip -o ${resp.filepath} -d ${taskDir}`));
   await Promise.all(unzipPromises);
 
+  const directoryInfo = await execPromise(`ls -l ${taskDir}`);
+  log.info(`DirectoryInfo is ${JSON.stringify(directoryInfo)}`);
   setCumulusMessageAdapterPath(taskDir, layerDir);
 
   const task = require(`${taskDir}/${resp.moduleFileName}`); //eslint-disable-line global-require
