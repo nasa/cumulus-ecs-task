@@ -83,16 +83,17 @@ function downloadFile(url, destinationFilename) {
 }
 
 /**
- * Downloads a set of layers from AWS
+ * Downloads an array of layers from AWS
  *
- * @param  {[string]} layers - list of layer config objects to download
- * @param  {string} layerPath - path to download the files to, generally '/opt'
- * @returns {[string]} returns an array of filepath strings to downloaded layer .zips
+ * @param  {Array<Object>} layers  - list of layer config objects to download
+ * @param  {Array<string>} layersDir - path to download the files to, generally '/opt'
+ * @returns {Promise<Array>}  - returns an array of promises that resolve to a
+ *                              filepath strings to downloaded layer .zips
  */
-async function downloadLayers(layers, layerPath) {
+async function downloadLayers(layers, layersDir) {
   const layerDownloadPromises = layers.map((layer) => {
     log.info(`Adding layer ${JSON.stringify(layer)} to container`);
-    const filePath = `${layerPath}/${getFunctionName(layer.LayerArn)}.zip`;
+    const filePath = `${layersDir}/${getFunctionName(layer.LayerArn)}.zip`;
     return downloadFile(layer.Content.Location, filePath).then(() => filePath);
   });
   return await Promise.all(layerDownloadPromises);
@@ -100,17 +101,19 @@ async function downloadLayers(layers, layerPath) {
 
 /**
 * Download the zip file of a lambda function from AWS
+* and it's associated layer .zip files, if any.
 *
 * @param {string} arn - the arn of the lambda function
 * @param {string} workDir - the dir to download the lambda function to
-* @param {string} layersDirectory - the dir layers will be extracted to
+* @param {string} layersDir - the dir layers will be downloaded to
 * @returns {Promise<Object>} returns an object that includes `filepath`,
 * `moduleFileName`, `moduleFunctionName` arguments.
 * The `filepath` is the path to the zip file of the lambda function.
 * The `moduleFileName` is the filename of the node module.
 * The `moduleFunctionName` is the name of the exported function to call in the module.
+* The 'layerPaths' is an array of filepaths to downloaded layer zip files
 **/
-async function getLambdaZip(arn, workDir, layersDirectory) {
+async function getLambdaSource(arn, workDir, layersDir) {
   const lambda = new AWS.Lambda({ apiVersion: '2015-03-31' });
 
   const data = await lambda.getFunction({ FunctionName: arn }).promise();
@@ -126,8 +129,9 @@ async function getLambdaZip(arn, workDir, layersDirectory) {
     const layers = data.Configuration.Layers;
     const layerConfigPromises = layers.map((layer) => lambda.getLayerVersionByArn({ Arn: layer.Arn }).promise());
     const layerConfigs = await Promise.all(layerConfigPromises);
-    layerPaths = await downloadLayers(layerConfigs, layersDirectory);
+    layerPaths = await downloadLayers(layerConfigs, layersDir);
   }
+
   const filepath = path.join(workDir, 'fn.zip');
   await downloadFile(codeUrl, filepath);
   return {
@@ -141,7 +145,7 @@ async function getLambdaZip(arn, workDir, layersDirectory) {
 /**
  * Given a task dir, detects if the CMA is present in that
  * directory.  Sets CUMULUS_MESSAGE_ADAPTER_DIR env variable to that
- * directory, else sets it to the default layersDirectory used
+ * directory, else sets it to the default layersDir used
  * by lambda layers.
  *
  * @param  {string} taskDir - The path to the ECS task source
@@ -157,7 +161,8 @@ function setCumulusMessageAdapterPath(taskDir, layerDir) {
 
 
 /**
-* Downloads and extracts the code of a lambda function from its zip file
+* Downloads and extracts the code of a lambda function and it's associated layers
+* into expected locations on the filesystem
 *
 * @param {string} lambdaArn - the arn of the lambda function
 * @param {string} workDir - the temporary dir used to download the lambda zip file
@@ -166,8 +171,8 @@ function setCumulusMessageAdapterPath(taskDir, layerDir) {
 * @returns {Promise<Function>} the `handler` which is the javascript function
 *                              that will run in the ECS service
 **/
-async function downloadLambdaHandler(lambdaArn, workDir, taskDir, layerDir) {
-  const resp = await getLambdaZip(lambdaArn, workDir, layerDir);
+async function installLambdaFunction(lambdaArn, workDir, taskDir, layerDir) {
+  const resp = await getLambdaSource(lambdaArn, workDir, layerDir);
   const unzipPromises = resp.layerPaths.map((layerFilePath) => execPromise(`unzip -o ${layerFilePath} -d ${layerDir}`));
   unzipPromises.push(execPromise(`unzip -o ${resp.filepath} -d ${taskDir}`));
   await Promise.all(unzipPromises);
@@ -317,9 +322,9 @@ async function runTask(options) {
   assert(options && typeof options.lambdaInput === 'object', 'options.lambdaInput object is required');
   assert(options.taskDirectory && typeof options.taskDirectory === 'string', 'options.taskDirectory string is required');
   assert(options.workDirectory && typeof options.workDirectory === 'string', 'options.workDirectory string is required');
-  assert(!options.layersDirectory || typeof options.layersDirectory === 'string', 'options.layersDirectory should be a string');
+  assert(!options.layersDir || typeof options.layersDir === 'string', 'options.layersDir should be a string');
 
-  const layerExtractionDirectory = options.layersDirectory ? options.layersDirectory : layersDefaultDirectory;
+  const layerExtractionDirectory = options.layersDir ? options.layersDir : layersDefaultDirectory;
   const lambdaArn = options.lambdaArn;
   const event = options.lambdaInput;
   const taskDir = options.taskDirectory;
@@ -329,7 +334,7 @@ async function runTask(options) {
 
   log.info('Downloading the Lambda function');
   try {
-    const handler = await downloadLambdaHandler(lambdaArn, workDir, taskDir, layerExtractionDirectory);
+    const handler = await installLambdaFunction(lambdaArn, workDir, taskDir, layerExtractionDirectory);
     const output = await handleResponse(event, handler);
     log.info('task executed successfully');
     return output;
@@ -360,7 +365,7 @@ async function runServiceFromSQS(options) {
   assert(options.sqsUrl && typeof options.sqsUrl === 'string', 'options.sqsUrl string is required');
   assert(options.taskDirectory && typeof options.taskDirectory === 'string', 'options.taskDirectory string is required');
   assert(options.workDirectory && typeof options.workDirectory === 'string', 'options.workDirectory string is required');
-  assert(!options.layersDirectory || typeof options.layersDirectory === 'string', 'options.layersDirectory should be a string');
+  assert(!options.layersDir || typeof options.layersDir === 'string', 'options.layersDir should be a string');
 
   const sqs = new AWS.SQS({ apiVersion: '2016-11-23' });
 
@@ -368,7 +373,7 @@ async function runServiceFromSQS(options) {
   const sqsUrl = options.sqsUrl;
   const taskDir = options.taskDirectory;
   const workDir = options.workDirectory;
-  const layerExtractionDirectory = options.layersDirectory ? options.layersDirectory : layersDefaultDirectory;
+  const layerExtractionDirectory = options.layersDir ? options.layersDir : layersDefaultDirectory;
 
   const runForever = isBoolean(options.runForever) ? options.runForever : true;
 
@@ -376,7 +381,7 @@ async function runServiceFromSQS(options) {
 
 
   log.info('Downloading the Lambda function');
-  const handler = await downloadLambdaHandler(lambdaArn, workDir, taskDir, layerExtractionDirectory);
+  const handler = await installLambdaFunction(lambdaArn, workDir, taskDir, layerExtractionDirectory);
 
   let sigTermReceived = false;
   process.on('SIGTERM', () => {
@@ -433,7 +438,7 @@ async function runServiceFromSQS(options) {
 * defaults to null, which deactivates heartbeats
 * @param {string} options.taskDirectory - the directory to put the unzipped lambda zip
 * @param {string} options.workDirectory - the directory to use for downloading the lambda zip file
-* @param {string} options.layersDirectory - the directory to use for extracting lambda layers.  Defaults to /opt
+* @param {string} options.layersDir - the directory to use for extracting lambda layers.  Defaults to /opt
 * @param {boolean} [options.runForever=true] - whether to poll the activity forever (defaults to true)
 * @returns {Promise<undefined>} undefined
 **/
@@ -443,7 +448,7 @@ async function runServiceFromActivity(options) {
   assert(options.activityArn && typeof options.activityArn === 'string', 'options.activityArn string is required');
   assert(options.taskDirectory && typeof options.taskDirectory === 'string', 'options.taskDirectory string is required');
   assert(options.workDirectory && typeof options.workDirectory === 'string', 'options.workDirectory string is required');
-  assert(!options.layersDirectory || typeof options.layersDirectory === 'string', 'options.layersDirectory should be a string');
+  assert(!options.layersDir || typeof options.layersDir === 'string', 'options.layersDir should be a string');
 
   if (options.heartbeat) {
     assert(Number.isInteger(options.heartbeat), 'options.heartbeat must be an integer');
@@ -454,14 +459,14 @@ async function runServiceFromActivity(options) {
   const taskDir = options.taskDirectory;
   const workDir = options.workDirectory;
   const heartbeatInterval = options.heartbeat;
-  const layerExtractionDirectory = options.layersDirectory ? options.layersDirectory : layersDefaultDirectory;
+  const layerExtractionDirectory = options.layersDir ? options.layersDir : layersDefaultDirectory;
 
   const runForever = isBoolean(options.runForever) ? options.runForever : true;
 
   log.sender = getLogSenderFromLambdaId(lambdaArn);
 
   log.info('Downloading the Lambda function');
-  const handler = await downloadLambdaHandler(lambdaArn, workDir, taskDir, layerExtractionDirectory);
+  const handler = await installLambdaFunction(lambdaArn, workDir, taskDir, layerExtractionDirectory);
 
   let sigTermReceived = false;
   process.on('SIGTERM', () => {
