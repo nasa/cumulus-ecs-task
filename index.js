@@ -322,9 +322,9 @@ async function runTask(options) {
   assert(options && typeof options.lambdaInput === 'object', 'options.lambdaInput object is required');
   assert(options.taskDirectory && typeof options.taskDirectory === 'string', 'options.taskDirectory string is required');
   assert(options.workDirectory && typeof options.workDirectory === 'string', 'options.workDirectory string is required');
-  assert(!options.layersDir || typeof options.layersDir === 'string', 'options.layersDir should be a string');
+  assert(!options.layersDirectory || typeof options.layersDirectory === 'string', 'options.layersDir should be a string');
 
-  const layerExtractionDirectory = options.layersDir ? options.layersDir : layersDefaultDirectory;
+  const layersDir = options.layersDirectory ? options.layersDirectory : layersDefaultDirectory;
   const lambdaArn = options.lambdaArn;
   const event = options.lambdaInput;
   const taskDir = options.taskDirectory;
@@ -334,7 +334,7 @@ async function runTask(options) {
 
   log.info('Downloading the Lambda function');
   try {
-    const handler = await installLambdaFunction(lambdaArn, workDir, taskDir, layerExtractionDirectory);
+    const handler = await installLambdaFunction(lambdaArn, workDir, taskDir, layersDir);
     const output = await handleResponse(event, handler);
     log.info('task executed successfully');
     return output;
@@ -365,7 +365,7 @@ async function runServiceFromSQS(options) {
   assert(options.sqsUrl && typeof options.sqsUrl === 'string', 'options.sqsUrl string is required');
   assert(options.taskDirectory && typeof options.taskDirectory === 'string', 'options.taskDirectory string is required');
   assert(options.workDirectory && typeof options.workDirectory === 'string', 'options.workDirectory string is required');
-  assert(!options.layersDir || typeof options.layersDir === 'string', 'options.layersDir should be a string');
+  assert(!options.layersDirectory || typeof options.layersDirectory === 'string', 'options.layersDir should be a string');
 
   const sqs = new AWS.SQS({ apiVersion: '2016-11-23' });
 
@@ -373,7 +373,7 @@ async function runServiceFromSQS(options) {
   const sqsUrl = options.sqsUrl;
   const taskDir = options.taskDirectory;
   const workDir = options.workDirectory;
-  const layerExtractionDirectory = options.layersDir ? options.layersDir : layersDefaultDirectory;
+  const layersDir = options.layersDirectory ? options.layersDirectory : layersDefaultDirectory;
 
   const runForever = isBoolean(options.runForever) ? options.runForever : true;
 
@@ -381,7 +381,7 @@ async function runServiceFromSQS(options) {
 
 
   log.info('Downloading the Lambda function');
-  const handler = await installLambdaFunction(lambdaArn, workDir, taskDir, layerExtractionDirectory);
+  const handler = await installLambdaFunction(lambdaArn, workDir, taskDir, layersDir);
 
   let sigTermReceived = false;
   process.on('SIGTERM', () => {
@@ -448,7 +448,7 @@ async function runServiceFromActivity(options) {
   assert(options.activityArn && typeof options.activityArn === 'string', 'options.activityArn string is required');
   assert(options.taskDirectory && typeof options.taskDirectory === 'string', 'options.taskDirectory string is required');
   assert(options.workDirectory && typeof options.workDirectory === 'string', 'options.workDirectory string is required');
-  assert(!options.layersDir || typeof options.layersDir === 'string', 'options.layersDir should be a string');
+  assert(!options.layersDirectory || typeof options.layersDirectory === 'string', 'options.layersDir should be a string');
 
   if (options.heartbeat) {
     assert(Number.isInteger(options.heartbeat), 'options.heartbeat must be an integer');
@@ -459,14 +459,14 @@ async function runServiceFromActivity(options) {
   const taskDir = options.taskDirectory;
   const workDir = options.workDirectory;
   const heartbeatInterval = options.heartbeat;
-  const layerExtractionDirectory = options.layersDir ? options.layersDir : layersDefaultDirectory;
+  const layersDir = options.layersDirectory ? options.layersDirectory : layersDefaultDirectory;
 
   const runForever = isBoolean(options.runForever) ? options.runForever : true;
 
   log.sender = getLogSenderFromLambdaId(lambdaArn);
 
   log.info('Downloading the Lambda function');
-  const handler = await installLambdaFunction(lambdaArn, workDir, taskDir, layerExtractionDirectory);
+  const handler = await installLambdaFunction(lambdaArn, workDir, taskDir, layersDir);
 
   let sigTermReceived = false;
   process.on('SIGTERM', () => {
