@@ -6,6 +6,11 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/) and this p
 
 ## [Unreleased]
 
+### Added
+- **CUMULUS-1418**
+  - Added ability to use lambda layers if they are configured for the target lambda
+  - Added logic to allow CMA to utilize default `cumulus-message-adapter` location, else expect it in /opt/
+
 ## [v1.2.5]
 
 ### Fixed
