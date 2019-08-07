@@ -111,7 +111,7 @@ async function downloadLayers(layers, layersDir) {
 * The `filepath` is the path to the zip file of the lambda function.
 * The `moduleFileName` is the filename of the node module.
 * The `moduleFunctionName` is the name of the exported function to call in the module.
-* The 'layerPaths' is an array of filepaths to downloaded layer zip files
+* The `layerPaths` is an array of filepaths to downloaded layer zip files
 **/
 async function getLambdaSource(arn, workDir, layersDir) {
   const lambda = new AWS.Lambda({ apiVersion: '2015-03-31' });
