@@ -1,0 +1,1 @@
+Text file indicating the presence of a 'layer'

@@ -5,7 +5,10 @@
 const https = require('https');
 const isBoolean = require('lodash.isboolean');
 const path = require('path');
-const execSync = require('child_process').execSync;
+const { promisify } = require('util');
+const { exec } = require('child_process');
+const execPromise = promisify(exec);
+
 const assert = require('assert');
 const pRetry = require('p-retry');
 
@@ -16,6 +19,8 @@ const Logger = require('./Logger');
 const log = new Logger();
 
 const region = process.env.AWS_DEFAULT_REGION || 'us-east-1';
+const layersDefaultDirectory = '/opt/';
+
 AWS.config.update({ region: region });
 
 // eslint-disable-next-line require-jsdoc
@@ -25,16 +30,11 @@ const isLambdaFunctionArn = (id) => id.startsWith('arn:aws:lambda');
 function getFunctionName(lambdaId) {
   if (isLambdaFunctionArn(lambdaId)) {
     const FUNCTION_NAME_FIELD = 6;
-
     return lambdaId.split(':')[FUNCTION_NAME_FIELD];
   }
 
   return lambdaId;
 }
-
-// eslint-disable-next-line require-jsdoc
-const getLogSenderFromLambdaId = (lambdaId) =>
-  `cumulus-ecs-task/${getFunctionName(lambdaId)}`;
 
 /**
  * Download a URL to file
@@ -45,7 +45,6 @@ const getLogSenderFromLambdaId = (lambdaId) =>
  */
 function tryToDownloadFile(url, destinationFilename) {
   const file = fs.createWriteStream(destinationFilename);
-
   return new Promise((resolve, reject) => {
     file.on('error', reject);
     file.on('finish', () => file.close());
@@ -56,6 +55,10 @@ function tryToDownloadFile(url, destinationFilename) {
       .on('error', reject);
   });
 }
+
+// eslint-disable-next-line require-jsdoc
+const getLogSenderFromLambdaId = (lambdaId) =>
+  `cumulus-ecs-task/${getFunctionName(lambdaId)}`;
 
 /**
  * Download a URL and save it to a file.  If an ETIMEDOUT error is received,
@@ -80,17 +83,37 @@ function downloadFile(url, destinationFilename) {
 }
 
 /**
+ * Downloads an array of layers from AWS
+ *
+ * @param  {Array<Object>} layers  - list of layer config objects to download
+ * @param  {Array<string>} layersDir - path to download the files to, generally '/opt'
+ * @returns {Promise<Array>}  - returns an array of promises that resolve to a
+ *                              filepath strings to downloaded layer .zips
+ */
+async function downloadLayers(layers, layersDir) {
+  const layerDownloadPromises = layers.map((layer) => {
+    log.info(`Adding layer ${JSON.stringify(layer)} to container`);
+    const filePath = `${layersDir}/${getFunctionName(layer.LayerArn)}.zip`;
+    return downloadFile(layer.Content.Location, filePath).then(() => filePath);
+  });
+  return await Promise.all(layerDownloadPromises);
+}
+
+/**
 * Download the zip file of a lambda function from AWS
+* and it's associated layer .zip files, if any.
 *
 * @param {string} arn - the arn of the lambda function
-* @param {strind} workDir - the dir to download the lambda function to
+* @param {string} workDir - the dir to download the lambda function to
+* @param {string} layersDir - the dir layers will be downloaded to
 * @returns {Promise<Object>} returns an object that includes `filepath`,
 * `moduleFileName`, `moduleFunctionName` arguments.
 * The `filepath` is the path to the zip file of the lambda function.
 * The `moduleFileName` is the filename of the node module.
 * The `moduleFunctionName` is the name of the exported function to call in the module.
+* The `layerPaths` is an array of filepaths to downloaded layer zip files
 **/
-async function getLambdaZip(arn, workDir) {
+async function getLambdaSource(arn, workDir, layersDir) {
   const lambda = new AWS.Lambda({ apiVersion: '2015-03-31' });
 
   const data = await lambda.getFunction({ FunctionName: arn }).promise();
@@ -101,30 +124,61 @@ async function getLambdaZip(arn, workDir) {
   const moduleFileName = moduleFn[0];
   const moduleFunctionName = moduleFn[1];
 
+  let layerPaths = [];
+  if (data.Configuration.Layers) {
+    const layers = data.Configuration.Layers;
+    const layerConfigPromises = layers.map((layer) => lambda.getLayerVersionByArn({ Arn: layer.Arn }).promise());
+    const layerConfigs = await Promise.all(layerConfigPromises);
+    layerPaths = await downloadLayers(layerConfigs, layersDir);
+  }
+
   const filepath = path.join(workDir, 'fn.zip');
-
   await downloadFile(codeUrl, filepath);
-
   return {
     filepath,
     moduleFileName,
-    moduleFunctionName
+    moduleFunctionName,
+    layerPaths
   };
 }
 
 /**
-* Downloads and extracts the code of a lambda function from its zip file
+ * Given a task dir, detects if the CMA is present in that
+ * directory.  Sets CUMULUS_MESSAGE_ADAPTER_DIR env variable to that
+ * directory, else sets it to the default layersDir used
+ * by lambda layers.
+ *
+ * @param  {string} taskDir - The path to the ECS task source
+ * @param {string} layerDir - The directory layers are extracted to
+ * @returns {undefined} - no return value
+ */
+function setCumulusMessageAdapterPath(taskDir, layerDir) {
+  const CmaPath = `${taskDir}/cumulus-message-adapter`;
+  const adapterPath = fs.existsSync(CmaPath) ? CmaPath : layerDir;
+  log.info(`Setting CMA path to ${adapterPath}`);
+  process.env.CUMULUS_MESSAGE_ADAPTER_DIR = adapterPath;
+}
+
+
+/**
+* Downloads and extracts the code of a lambda function and it's associated layers
+* into expected locations on the filesystem
 *
 * @param {string} lambdaArn - the arn of the lambda function
 * @param {string} workDir - the temporary dir used to download the lambda zip file
 * @param {string} taskDir - the dir where the lambda function will be located
+* @param {string} layerDir - the dir where layers are to be extracted/used.  Generally /opt.
 * @returns {Promise<Function>} the `handler` which is the javascript function
 *                              that will run in the ECS service
 **/
-async function downloadLambdaHandler(lambdaArn, workDir, taskDir) {
-  const resp = await getLambdaZip(lambdaArn, workDir);
+async function installLambdaFunction(lambdaArn, workDir, taskDir, layerDir) {
+  const resp = await getLambdaSource(lambdaArn, workDir, layerDir);
+  const unzipPromises = resp.layerPaths.map((layerFilePath) => execPromise(`unzip -o ${layerFilePath} -d ${layerDir}`));
+  unzipPromises.push(execPromise(`unzip -o ${resp.filepath} -d ${taskDir}`));
+  await Promise.all(unzipPromises);
 
-  execSync(`unzip -o ${resp.filepath} -d ${taskDir}`);
+  setCumulusMessageAdapterPath(taskDir, layerDir);
+
   const task = require(`${taskDir}/${resp.moduleFileName}`); //eslint-disable-line global-require
   return task[resp.moduleFunctionName];
 }
@@ -268,7 +322,9 @@ async function runTask(options) {
   assert(options && typeof options.lambdaInput === 'object', 'options.lambdaInput object is required');
   assert(options.taskDirectory && typeof options.taskDirectory === 'string', 'options.taskDirectory string is required');
   assert(options.workDirectory && typeof options.workDirectory === 'string', 'options.workDirectory string is required');
+  assert(!options.layersDirectory || typeof options.layersDirectory === 'string', 'options.layersDir should be a string');
 
+  const layersDir = options.layersDirectory ? options.layersDirectory : layersDefaultDirectory;
   const lambdaArn = options.lambdaArn;
   const event = options.lambdaInput;
   const taskDir = options.taskDirectory;
@@ -276,13 +332,9 @@ async function runTask(options) {
 
   log.sender = getLogSenderFromLambdaId(lambdaArn);
 
-  // the cumulus-message-adapter dir is in an unexpected place,
-  // so tell the adapter where to find it
-  process.env.CUMULUS_MESSAGE_ADAPTER_DIR = `${taskDir}/cumulus-message-adapter/`;
-
   log.info('Downloading the Lambda function');
   try {
-    const handler = await downloadLambdaHandler(lambdaArn, workDir, taskDir);
+    const handler = await installLambdaFunction(lambdaArn, workDir, taskDir, layersDir);
     const output = await handleResponse(event, handler);
     log.info('task executed successfully');
     return output;
@@ -313,6 +365,7 @@ async function runServiceFromSQS(options) {
   assert(options.sqsUrl && typeof options.sqsUrl === 'string', 'options.sqsUrl string is required');
   assert(options.taskDirectory && typeof options.taskDirectory === 'string', 'options.taskDirectory string is required');
   assert(options.workDirectory && typeof options.workDirectory === 'string', 'options.workDirectory string is required');
+  assert(!options.layersDirectory || typeof options.layersDirectory === 'string', 'options.layersDir should be a string');
 
   const sqs = new AWS.SQS({ apiVersion: '2016-11-23' });
 
@@ -320,16 +373,15 @@ async function runServiceFromSQS(options) {
   const sqsUrl = options.sqsUrl;
   const taskDir = options.taskDirectory;
   const workDir = options.workDirectory;
+  const layersDir = options.layersDirectory ? options.layersDirectory : layersDefaultDirectory;
+
   const runForever = isBoolean(options.runForever) ? options.runForever : true;
 
   log.sender = getLogSenderFromLambdaId(lambdaArn);
 
-  // the cumulus-message-adapter dir is in an unexpected place,
-  // so tell the adapter where to find it
-  process.env.CUMULUS_MESSAGE_ADAPTER_DIR = `${taskDir}/cumulus-message-adapter/`;
 
   log.info('Downloading the Lambda function');
-  const handler = await downloadLambdaHandler(lambdaArn, workDir, taskDir);
+  const handler = await installLambdaFunction(lambdaArn, workDir, taskDir, layersDir);
 
   let sigTermReceived = false;
   process.on('SIGTERM', () => {
@@ -386,6 +438,7 @@ async function runServiceFromSQS(options) {
 * defaults to null, which deactivates heartbeats
 * @param {string} options.taskDirectory - the directory to put the unzipped lambda zip
 * @param {string} options.workDirectory - the directory to use for downloading the lambda zip file
+* @param {string} options.layersDir - the directory to use for extracting lambda layers.  Defaults to /opt
 * @param {boolean} [options.runForever=true] - whether to poll the activity forever (defaults to true)
 * @returns {Promise<undefined>} undefined
 **/
@@ -395,6 +448,8 @@ async function runServiceFromActivity(options) {
   assert(options.activityArn && typeof options.activityArn === 'string', 'options.activityArn string is required');
   assert(options.taskDirectory && typeof options.taskDirectory === 'string', 'options.taskDirectory string is required');
   assert(options.workDirectory && typeof options.workDirectory === 'string', 'options.workDirectory string is required');
+  assert(!options.layersDirectory || typeof options.layersDirectory === 'string', 'options.layersDir should be a string');
+
   if (options.heartbeat) {
     assert(Number.isInteger(options.heartbeat), 'options.heartbeat must be an integer');
   }
@@ -404,17 +459,14 @@ async function runServiceFromActivity(options) {
   const taskDir = options.taskDirectory;
   const workDir = options.workDirectory;
   const heartbeatInterval = options.heartbeat;
+  const layersDir = options.layersDirectory ? options.layersDirectory : layersDefaultDirectory;
 
   const runForever = isBoolean(options.runForever) ? options.runForever : true;
 
   log.sender = getLogSenderFromLambdaId(lambdaArn);
 
-  // the cumulus-message-adapter dir is in an unexpected place,
-  // so tell the adapter where to find it
-  process.env.CUMULUS_MESSAGE_ADAPTER_DIR = `${taskDir}/cumulus-message-adapter/`;
-
   log.info('Downloading the Lambda function');
-  const handler = await downloadLambdaHandler(lambdaArn, workDir, taskDir);
+  const handler = await installLambdaFunction(lambdaArn, workDir, taskDir, layersDir);
 
   let sigTermReceived = false;
   process.on('SIGTERM', () => {

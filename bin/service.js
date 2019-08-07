@@ -101,7 +101,7 @@ else if (argv.lambdaInput) {
   runTask(argv).catch(console.error);
 }
 else {
-  log.error('You must provider one of the following options: activity-arn, sqs-url, lambda-input');
+  log.error('You must provide one of the following options: activity-arn, sqs-url, lambda-input');
   process.exit(1);
 }
 
