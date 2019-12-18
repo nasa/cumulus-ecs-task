@@ -86,7 +86,7 @@ docker run -e AWS_ACCESS_KEY_ID='<aws-access-key>' \
   --lambdaArn <your-lambda-arn>
 ```
 
-Finally, trigger a workflow. You can do this from the Cumulus dashboard, the Cumulus API, or with the AWS Console by supplying a
+Finally, trigger a workflow. You can do this from the Cumulus dashboard, the Cumulus API, or with the AWS Console.
 
 ## Troubleshooting
 
