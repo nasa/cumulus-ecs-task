@@ -7,7 +7,9 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/) and this p
 ## [v1.4.0]
 
 ### Changed
+
 - **CUMULUS-1626**
+
   - Updated node runtime to 10.16.x for cumulus-ecs-task
 
 ## [v1.3.0]
