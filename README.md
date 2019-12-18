@@ -13,7 +13,7 @@ When included in a Cumulus workflow and deployed to AWS, it will download a spec
 
 ## Compatibility
 
-This only works with Node.js Lambda functions, and requires that the Lambda function it is running has a dependency of at least v1.1.0 of [cumulus-message-adapter-js](https://github.com/cumulus-nasa/cumulus-message-adapter-js).
+This only works with Node.js Lambda functions, and requires that the Lambda function it is running has a dependency of at least v1.0.1 of [cumulus-message-adapter-js](https://github.com/cumulus-nasa/cumulus-message-adapter-js).
 
 ## Usage
 
