@@ -9,7 +9,7 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/) and this p
 ### BREAKING CHANGES
 
 - **CUMULUS-1629**
-  - Update image python to python3.
+  - Update image python to python3.   This version of cumulus-ecs-task is *required* for CMA >= 1.2.0.
 
 ## [v1.4.0]
 
