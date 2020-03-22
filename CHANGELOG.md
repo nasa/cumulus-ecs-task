@@ -9,7 +9,7 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/) and this p
 ### BREAKING CHANGES
 
 - **CUMULUS-1629**
-  - Remove install of python 2 from cumulus-ecs-image.
+  - Update image python to python3.
 
 ## [v1.4.0]
 
