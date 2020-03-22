@@ -4,7 +4,6 @@ RUN npm install -g npm@latest
 
 RUN apk update && \
   apk add unzip && \
-  apk add python2 && \
   rm -rf /var/cache/apk
 
 RUN addgroup -S -g 433 service

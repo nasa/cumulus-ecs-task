@@ -4,6 +4,13 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](http://keepachangelog.com/) and this project adheres to [Semantic Versioning](http://semver.org/).
 
+## [v1.5.0]
+
+### BREAKING CHANGES
+
+- **CUMULUS-1629**
+  - Remove install of python 2 from cumulus-ecs-image.
+
 ## [v1.4.0]
 
 ### Changed
@@ -89,9 +96,9 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/) and this p
 
 ### Added
 - Initial release
-
-[Unreleased]: https://github.com/nasa/cumulus-ecs-task/compare/v1.4.0...HEAD
-[v1.4.0]: https://github.com/nasa/cumulus-ecs-task/compare/v1.3.0...1.4.0
+[Unreleased]: https://github.com/nasa/cumulus-ecs-task/compare/v1.5.0...HEAD
+[v1.5.0]: https://github.com/nasa/cumulus-ecs-task/compare/v1.4.0...v1.5.0
+[v1.4.0]: https://github.com/nasa/cumulus-ecs-task/compare/v1.3.0...v1.4.0
 [v1.3.0]: https://github.com/nasa/cumulus-ecs-task/compare/v1.2.5...v1.3.0
 [v1.2.5]: https://github.com/nasa/cumulus-ecs-task/compare/v1.2.4...v1.2.5
 [v1.1.2]: https://github.com/nasa/cumulus-ecs-task/compare/v1.1.2...v1.2.0
