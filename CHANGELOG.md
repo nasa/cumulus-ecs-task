@@ -4,7 +4,15 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](http://keepachangelog.com/) and this project adheres to [Semantic Versioning](http://semver.org/).
 
+## [v1.5.1]
+
+### Fixed
+
+- Fixed python linking issue due to alpine python version update.
+
 ## [v1.5.0]
+
+** This release is broken, all users should update to v1.5.1
 
 ### BREAKING CHANGES
 
