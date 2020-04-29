@@ -266,7 +266,7 @@ async function getActivityTask(activityArn) {
 **/
 async function handleResponse(event, handler) {
   const context = { via: 'ECS' };
-  return await handler(event, context);
+  return handler(event, context);
 }
 
 /**

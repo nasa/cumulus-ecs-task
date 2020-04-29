@@ -4,6 +4,13 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](http://keepachangelog.com/) and this project adheres to [Semantic Versioning](http://semver.org/).
 
+## [v.1.6.0]
+
+## BREAKING CHANGES
+
+- **CUMULUS-1896** - Updates to the cma-js library and Cumulus core required an update to this image to utilize Async handlers.  See [node.js lambda documentation](https://docs.aws.amazon.com/lambda/latest/dg/nodejs-handler.html) for more on this.   Users utilizing this module should update their lambdas to utilize an async handler style.
+
+
 ## [v1.5.1]
 
 ### Fixed
