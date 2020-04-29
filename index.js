@@ -265,8 +265,7 @@ async function getActivityTask(activityArn) {
 * @returns {Promise} the lambda functions response
 **/
 async function handleResponse(event, handler) {
-  const context = { via: 'ECS' };
-  return handler(event, context);
+  return handler(event, { via: 'ECS' });
 }
 
 /**
