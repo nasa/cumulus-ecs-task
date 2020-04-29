@@ -10,7 +10,7 @@ import AWS from 'aws-sdk';
 import archiver from 'archiver';
 import { runTask, runServiceFromActivity } from '../index';
 
-test.beforeEach(async (t) => {
+test.beforeEach(async(t) => {
   t.context.tempDir = path.join(os.tmpdir(), 'cumulus-ecs-task', `${Date.now()}`, path.sep);
   fs.mkdirpSync(t.context.tempDir);
   t.context.lambdaZip = path.join(t.context.tempDir, 'remoteLambda.zip');
@@ -80,7 +80,7 @@ test.beforeEach(async (t) => {
   t.context.stub = sinon.stub(AWS, 'Lambda')
     .returns({
       getLayerVersionByArn: () => ({
-        promise: async () => ({
+        promise: async() => ({
           LayerArn: 'notARealArn',
           Content: {
             Location: `https://example.com${t.context.getLayerUrlPath}`
@@ -88,7 +88,7 @@ test.beforeEach(async (t) => {
         })
       }),
       getFunction: () => ({
-        promise: async () => ({
+        promise: async() => ({
           Code: {
             Location: `https://example.com${t.context.lambdaZipUrlPath}`
           },
@@ -107,7 +107,7 @@ test.afterEach.always((t) => {
   fs.removeSync(t.context.tempDir);
 });
 
-test.serial('test successful task run', async (t) => {
+test.serial('test successful task run', async(t) => {
   const event = { hi: 'bye' };
 
   const output = await runTask({
@@ -120,7 +120,7 @@ test.serial('test successful task run', async (t) => {
   t.deepEqual(event, output);
 });
 
-test.serial('layers are extracted into target directory', async (t) => {
+test.serial('layers are extracted into target directory', async(t) => {
   const event = { hi: 'bye' };
   await runTask({
     lambdaArn: 'arn:aws:lambda:region:account-id:function:fake-function',
@@ -132,7 +132,7 @@ test.serial('layers are extracted into target directory', async (t) => {
   t.true(fs.existsSync(`${t.context.layerDirectory}/fakeLayer.txt`));
 });
 
-test.serial('CMA environment variable is set if CMA is not present', async (t) => {
+test.serial('CMA environment variable is set if CMA is not present', async(t) => {
   const event = { hi: 'bye' };
   await runTask({
     lambdaArn: 'arn:aws:lambda:region:account-id:function:fake-function',
@@ -144,17 +144,17 @@ test.serial('CMA environment variable is set if CMA is not present', async (t) =
   t.is(process.env.CUMULUS_MESSAGE_ADAPTER_DIR, t.context.layerDirectory);
 });
 
-test.serial('CMA environment variable is set if CMA is present', async (t) => {
+test.serial('CMA environment variable is set if CMA is present', async(t) => {
   const event = { hi: 'bye' };
   nock.cleanAll();
 
   nock('https://example.com')
     .get(t.context.lambdaZipUrlPath)
-      .reply(200, () => fs.createReadStream(t.context.lambdaCMAZip));
+    .reply(200, () => fs.createReadStream(t.context.lambdaCMAZip));
 
   nock('https://example.com')
     .get(t.context.getLayerUrlPath)
-      .reply(200, () => fs.createReadStream(t.context.layerZip));
+    .reply(200, () => fs.createReadStream(t.context.layerZip));
 
   await runTask({
     lambdaArn: 'arn:aws:lambda:region:account-id:function:fake-function',
@@ -168,7 +168,7 @@ test.serial('CMA environment variable is set if CMA is present', async (t) => {
 });
 
 
-test.serial('test failed task run', async (t) => {
+test.serial('test failed task run', async(t) => {
   const event = { hi: 'bye', error: 'it failed' };
   const promise = runTask({
     lambdaArn: 'arn:aws:lambda:region:account-id:function:fake-function',
@@ -177,11 +177,10 @@ test.serial('test failed task run', async (t) => {
     workDirectory: t.context.workDirectory,
     layersDirectory: t.context.layerDirectory
   });
-  const error = await t.throws(promise);
-  t.is(error, event.error);
+  await t.throwsAsync(promise, { message: event.error });
 });
 
-test.serial('test activity success', async (t) => {
+test.serial('test activity success', async(t) => {
   const input = {
     msg: 'this was a success'
   };
@@ -190,7 +189,7 @@ test.serial('test activity success', async (t) => {
   const sf = sinon.stub(AWS, 'StepFunctions')
     .returns({
       getActivityTask: () => ({
-        promise: async () => ({
+        promise: async() => ({
           taskToken: token,
           input: JSON.stringify(input)
         })
@@ -216,28 +215,25 @@ test.serial('test activity success', async (t) => {
   sf.restore();
 });
 
-test.serial('test activity failure', async (t) => {
+test.serial('test activity failure', async(t) => {
   const input = {
     msg: 'this was a failure',
-    error: {
-      name: 'failure',
-      message: 'it failed'
-    }
+    error: 'it failed'
   };
   const token = 'some token';
 
   const sf = sinon.stub(AWS, 'StepFunctions')
     .returns({
       getActivityTask: () => ({
-        promise: async () => ({
+        promise: async() => ({
           taskToken: token,
           input: JSON.stringify(input)
         })
       }),
       sendTaskFailure: (msg) => ({
         promise: () => {
-          t.is(msg.error, input.error.name);
-          t.is(msg.cause, input.error.message);
+          t.is(msg.error, 'Error');
+          t.is(msg.cause, input.error);
           return Promise.resolve();
         }
       })
@@ -255,20 +251,20 @@ test.serial('test activity failure', async (t) => {
   sf.restore();
 });
 
-test.serial('Retry zip download if connection-timeout received', async (t) => {
+test.serial('Retry zip download if connection-timeout received', async(t) => {
   nock.cleanAll();
 
   const timeoutFailure = nock('https://example.com')
     .get(t.context.lambdaZipUrlPath)
-      .replyWithError({ code: 'ETIMEDOUT' });
+    .replyWithError({ code: 'ETIMEDOUT' });
 
   nock('https://example.com')
     .get(t.context.lambdaZipUrlPath)
-      .reply(200, () => fs.createReadStream(t.context.lambdaZip));
+    .reply(200, () => fs.createReadStream(t.context.lambdaZip));
 
   nock('https://example.com')
     .get(t.context.getLayerUrlPath)
-      .reply(200, () => fs.createReadStream(t.context.layerZip));
+    .reply(200, () => fs.createReadStream(t.context.layerZip));
 
   const event = { hi: 'bye' };
 

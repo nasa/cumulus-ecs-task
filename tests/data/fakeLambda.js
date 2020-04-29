@@ -9,11 +9,12 @@
  */
 async function handler(event, _context) {
   if (event.error) {
-    throw event.error;
+    throw new Error(event.error);
   }
   return event;
 }
 
 module.exports = {
   handler
+
 };
