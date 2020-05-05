@@ -63,8 +63,8 @@ const cliOptions = createCliOptions([
   {
     name: 'heartbeat',
     default: null,
-    help: 'interval in milliseconds between sending heartbeat messages to the state machine. ' +
-    'default is null, which disables the heartbeat'
+    help: 'interval in milliseconds between sending heartbeat messages to the state machine. '
+    + 'default is null, which disables the heartbeat'
   },
   {
     name: 'help',

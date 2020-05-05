@@ -4,6 +4,13 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](http://keepachangelog.com/) and this project adheres to [Semantic Versioning](http://semver.org/).
 
+## [v.1.6.0]
+
+## BREAKING CHANGES
+
+- **CUMULUS-1896** - Updates to the [cumulus-message-adapter-js](https://github.com/nasa/cumulus-message-adapter-js) library and Cumulus core required an update to this image to utilize async handlers.  See [Node.js Lambda documentation](https://docs.aws.amazon.com/lambda/latest/dg/nodejs-handler.html) for more information on async handlers. Users utilizing this module should update their lambdas to utilize an async handler style.
+
+
 ## [v1.5.1]
 
 ### Fixed

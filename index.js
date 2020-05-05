@@ -57,8 +57,7 @@ function tryToDownloadFile(url, destinationFilename) {
 }
 
 // eslint-disable-next-line require-jsdoc
-const getLogSenderFromLambdaId = (lambdaId) =>
-  `cumulus-ecs-task/${getFunctionName(lambdaId)}`;
+const getLogSenderFromLambdaId = (lambdaId) => `cumulus-ecs-task/${getFunctionName(lambdaId)}`;
 
 /**
  * Download a URL and save it to a file.  If an ETIMEDOUT error is received,
@@ -69,24 +68,19 @@ const getLogSenderFromLambdaId = (lambdaId) =>
  * @returns {Promise<undefined>} resolves when file has been downloaded
  */
 function downloadFile(url, destinationFilename) {
-  return pRetry(() =>
-    tryToDownloadFile(url, destinationFilename)
-      .catch((err) => {
-        if (err.code === 'ETIMEDOUT') {
-          throw err;
-        }
-
-        throw new pRetry.AbortError(err);
-      }
-    )
-  );
+  return pRetry(() => tryToDownloadFile(url, destinationFilename).catch((err) => {
+    if (err.code === 'ETIMEDOUT') {
+      throw err;
+    }
+    throw new pRetry.AbortError(err);
+  }));
 }
 
 /**
  * Downloads an array of layers from AWS
  *
- * @param  {Array<Object>} layers  - list of layer config objects to download
- * @param  {Array<string>} layersDir - path to download the files to, generally '/opt'
+ * @param {Array<Object>} layers - list of layer config objects to download
+ * @param {Array<string>} layersDir - path to download the files to, generally '/opt'
  * @returns {Promise<Array>}  - returns an array of promises that resolve to a
  *                              filepath strings to downloaded layer .zips
  */
@@ -96,7 +90,7 @@ async function downloadLayers(layers, layersDir) {
     const filePath = `${layersDir}/${getFunctionName(layer.LayerArn)}.zip`;
     return downloadFile(layer.Content.Location, filePath).then(() => filePath);
   });
-  return await Promise.all(layerDownloadPromises);
+  return Promise.all(layerDownloadPromises);
 }
 
 /**
@@ -179,7 +173,7 @@ async function installLambdaFunction(lambdaArn, workDir, taskDir, layerDir) {
 
   setCumulusMessageAdapterPath(taskDir, layerDir);
 
-  const task = require(`${taskDir}/${resp.moduleFileName}`); //eslint-disable-line global-require
+  const task = require(`${taskDir}/${resp.moduleFileName}`); //eslint-disable-line import/no-dynamic-require,global-require
   return task[resp.moduleFunctionName];
 }
 
@@ -264,17 +258,8 @@ async function getActivityTask(activityArn) {
 * @param {Function} handler - the lambda function to execute
 * @returns {Promise} the lambda functions response
 **/
-function handleResponse(event, handler) {
-  const context = { via: 'ECS' };
-
-  return new Promise((resolve, reject) => {
-    handler(event, context, (err, output) => {
-      if (err) {
-        return reject(err);
-      }
-      return resolve(output);
-    });
-  });
+async function handleResponse(event, handler) {
+  return handler(event, { via: 'ECS' });
 }
 
 /**
@@ -325,17 +310,16 @@ async function runTask(options) {
   assert(!options.layersDirectory || typeof options.layersDirectory === 'string', 'options.layersDir should be a string');
 
   const layersDir = options.layersDirectory ? options.layersDirectory : layersDefaultDirectory;
-  const lambdaArn = options.lambdaArn;
-  const event = options.lambdaInput;
-  const taskDir = options.taskDirectory;
-  const workDir = options.workDirectory;
+  const {
+    lambdaArn, lambdaInput, taskDirectory, workDirectory
+  } = options;
 
   log.sender = getLogSenderFromLambdaId(lambdaArn);
 
   log.info('Downloading the Lambda function');
   try {
-    const handler = await installLambdaFunction(lambdaArn, workDir, taskDir, layersDir);
-    const output = await handleResponse(event, handler);
+    const handler = await installLambdaFunction(lambdaArn, workDirectory, taskDirectory, layersDir);
+    const output = await handleResponse(lambdaInput, handler);
     log.info('task executed successfully');
     return output;
   }
@@ -351,7 +335,7 @@ async function runTask(options) {
 *
 * @param {Object} options - options object
 * @param {string} options.lambdaArn - the arn of the lambda handler
-* @param {string} options.sqsUrl   - the url to the sqs queue
+* @param {string} options.sqsUrl - the url to the sqs queue
 * @param {integer} options.heartbeat - number of milliseconds between heartbeat messages.
 * defaults to null, which deactivates heartbeats
 * @param {string} options.taskDirectory - the directory to put the unzipped lambda zip
@@ -369,10 +353,9 @@ async function runServiceFromSQS(options) {
 
   const sqs = new AWS.SQS({ apiVersion: '2016-11-23' });
 
-  const lambdaArn = options.lambdaArn;
-  const sqsUrl = options.sqsUrl;
-  const taskDir = options.taskDirectory;
-  const workDir = options.workDirectory;
+  const {
+    lambdaArn, sqsUrl, taskDirecotry, workDirectory
+  } = options;
   const layersDir = options.layersDirectory ? options.layersDirectory : layersDefaultDirectory;
 
   const runForever = isBoolean(options.runForever) ? options.runForever : true;
@@ -381,7 +364,7 @@ async function runServiceFromSQS(options) {
 
 
   log.info('Downloading the Lambda function');
-  const handler = await installLambdaFunction(lambdaArn, workDir, taskDir, layersDir);
+  const handler = await installLambdaFunction(lambdaArn, workDirectory, taskDirecotry, layersDir);
 
   let sigTermReceived = false;
   process.on('SIGTERM', () => {
@@ -389,6 +372,7 @@ async function runServiceFromSQS(options) {
     sigTermReceived = true;
   });
 
+  /* eslint-disable no-await-in-loop*/
   let counter = 1;
   do {
     try {
@@ -399,7 +383,7 @@ async function runServiceFromSQS(options) {
       }).promise();
       const messages = resp.Messages;
       if (messages) {
-        const promises = messages.map(async (message) => {
+        const promises = messages.map(async(message) => {
           if (message && message.Body) {
             const receipt = message.ReceiptHandle;
             log.info('received message from queue, executing the task');
@@ -426,6 +410,7 @@ async function runServiceFromSQS(options) {
 
   log.info('Exiting');
 }
+/* eslint-enable no-await-in-loop*/
 
 /**
 * Start the Lambda handler as a service by polling a SF activity queue
@@ -454,11 +439,9 @@ async function runServiceFromActivity(options) {
     assert(Number.isInteger(options.heartbeat), 'options.heartbeat must be an integer');
   }
 
-  const lambdaArn = options.lambdaArn;
-  const activityArn = options.activityArn;
-  const taskDir = options.taskDirectory;
-  const workDir = options.workDirectory;
-  const heartbeatInterval = options.heartbeat;
+  const {
+    lambdaArn, activityArn, taskDirectory, workDirectory, heartbeat
+  } = options;
   const layersDir = options.layersDirectory ? options.layersDirectory : layersDefaultDirectory;
 
   const runForever = isBoolean(options.runForever) ? options.runForever : true;
@@ -466,13 +449,15 @@ async function runServiceFromActivity(options) {
   log.sender = getLogSenderFromLambdaId(lambdaArn);
 
   log.info('Downloading the Lambda function');
-  const handler = await installLambdaFunction(lambdaArn, workDir, taskDir, layersDir);
+  const handler = await installLambdaFunction(lambdaArn, workDirectory, taskDirectory, layersDir);
 
   let sigTermReceived = false;
   process.on('SIGTERM', () => {
     log.info('Received SIGTERM, will stop polling for new work');
     sigTermReceived = true;
   });
+
+  /* eslint-disable no-await-in-loop*/
 
   let counter = 1;
   do {
@@ -485,7 +470,7 @@ async function runServiceFromActivity(options) {
           activity.event,
           activity.token,
           handler,
-          heartbeatInterval
+          heartbeat
         );
       }
     }
@@ -500,6 +485,7 @@ async function runServiceFromActivity(options) {
 
   log.info('Exiting');
 }
+/* eslint-enable no-await-in-loop*/
 
 module.exports = {
   runServiceFromActivity,

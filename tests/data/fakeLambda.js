@@ -4,18 +4,17 @@
  * Example lambda function for tests
  *
  * @param {Object} event - lambda event object
- * @param {Object} context - lambda context object
- * @param {Object} cb - the callback function
+ * @param {Object} _context - lambda context object (unused)
  * @returns {Undefined} undefined
  */
-function handler(event, context, cb) {
+async function handler(event, _context) {
   if (event.error) {
-    return cb(event.error);
+    throw new Error(event.error);
   }
-
-  return cb(null, event);
+  return event;
 }
 
 module.exports = {
   handler
+
 };
