@@ -2,14 +2,28 @@
 
 All notable changes to this project will be documented in this file.
 
-The format is based on [Keep a Changelog](http://keepachangelog.com/) and this project adheres to [Semantic Versioning](http://semver.org/).
+The format is based on [Keep a Changelog](http://keepachangelog.com/) and this
+project adheres to [Semantic Versioning](http://semver.org/).
+
+## [Unreleased]
+
+## [v.1.7.0]
+
+### BREAKING CHANGES
+
+- Now uses Node version 12.18.1
 
 ## [v.1.6.0]
 
-## BREAKING CHANGES
+### BREAKING CHANGES
 
-- **CUMULUS-1896** - Updates to the [cumulus-message-adapter-js](https://github.com/nasa/cumulus-message-adapter-js) library and Cumulus core required an update to this image to utilize async handlers.  See [Node.js Lambda documentation](https://docs.aws.amazon.com/lambda/latest/dg/nodejs-handler.html) for more information on async handlers. Users utilizing this module should update their lambdas to utilize an async handler style.
-
+- **CUMULUS-1896** - Updates to the
+  [cumulus-message-adapter-js](https://github.com/nasa/cumulus-message-adapter-js)
+  library and Cumulus core required an update to this image to utilize async
+  handlers. See
+  [Node.js Lambda documentation](https://docs.aws.amazon.com/lambda/latest/dg/nodejs-handler.html)
+  for more information on async handlers. Users utilizing this module should
+  update their lambdas to utilize an async handler style.
 
 ## [v1.5.1]
 
@@ -24,7 +38,10 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/) and this p
 ### BREAKING CHANGES
 
 - **CUMULUS-1629**
-  - Update image python to python3.   This version of cumulus-ecs-task is *required* for [Cumulus message adapter](https://github.com/nasa/cumulus-message-adapter) >= 1.2.0.
+  - Update image python to python3. This version of cumulus-ecs-task is
+    *required* for
+    [Cumulus message adapter](https://github.com/nasa/cumulus-message-adapter)
+    >= 1.2.0.
 
 ## [v1.4.0]
 
@@ -38,8 +55,10 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/) and this p
 
 ### Added
 - **CUMULUS-1418**
-  - Added ability to use lambda layers if they are configured for the target lambda
-  - Added logic to allow CMA to utilize default `cumulus-message-adapter` location, else expect it in /opt/
+  - Added ability to use lambda layers if they are configured for the target
+    lambda
+  - Added logic to allow CMA to utilize default `cumulus-message-adapter`
+    location, else expect it in /opt/
 
 ## [v1.2.5]
 
@@ -102,16 +121,22 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/) and this p
 - Upgrade node version to node 8.11
 
 ## [v1.0.2] - 2018-03-30
-- increase activity queue timeout to 65 seconds as suggested here: https://docs.aws.amazon.com/AWSJavaScriptSDK/latest/AWS/StepFunctions.html#getActivityTask-property
+- increase activity queue timeout to 65 seconds as suggested here:
+  https://docs.aws.amazon.com/AWSJavaScriptSDK/latest/AWS/StepFunctions.html#getActivityTask-property
 
 ## [v1.0.1] - 2018-03-23
-- fixes the validation error that happens when error strings are too long for stepfunctions.sendTaskFailure()
+- fixes the validation error that happens when error strings are too long for
+  stepfunctions.sendTaskFailure()
 
 ## [v1.0.0] - 2018-03-08
 
 ### Added
 - Initial release
-[Unreleased]: https://github.com/nasa/cumulus-ecs-task/compare/v1.5.0...HEAD
+
+[Unreleased]: https://github.com/nasa/cumulus-ecs-task/compare/v1.7.0...HEAD
+[v1.7.0]: https://github.com/nasa/cumulus-ecs-task/compare/v1.6.0...v1.7.0
+[v1.6.0]: https://github.com/nasa/cumulus-ecs-task/compare/v1.5.1...v1.6.0
+[v1.5.1]: https://github.com/nasa/cumulus-ecs-task/compare/v1.5.0...v1.5.1
 [v1.5.0]: https://github.com/nasa/cumulus-ecs-task/compare/v1.4.0...v1.5.0
 [v1.4.0]: https://github.com/nasa/cumulus-ecs-task/compare/v1.3.0...v1.4.0
 [v1.3.0]: https://github.com/nasa/cumulus-ecs-task/compare/v1.2.5...v1.3.0
