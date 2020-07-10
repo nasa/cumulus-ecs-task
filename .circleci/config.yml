@@ -1,4 +1,10 @@
-version: 2
+version: 2.1
+
+workflows:
+  my-workflow:
+    jobs:
+      - build:
+          context: cumulus-packages
 
 jobs:
   build:
@@ -15,7 +21,7 @@ jobs:
           name: Lint
           command: npm run lint
       - run:
-          name: Test 
+          name: Test
           command: npm run test
       - run:
           name: Build
@@ -24,6 +30,6 @@ jobs:
           name: Deploy
           command: |
             if [[  "$CIRCLE_BRANCH" == 'master' ]]; then
+              GITHUB_TOKEN=${GITHUB_TOKEN} ./bin/release.sh
               echo "//registry.npmjs.org/:_authToken=${NPM_TOKEN}" > ~/.npmrc
-              ./bin/release.sh
             fi
