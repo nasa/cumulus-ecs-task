@@ -1,14 +1,14 @@
 'use strict';
 
-import os from 'os';
-import fs from 'fs-extra';
-import path from 'path';
-import test from 'ava';
-import nock from 'nock';
-import sinon from 'sinon';
-import AWS from 'aws-sdk';
-import archiver from 'archiver';
-import { runTask, runServiceFromActivity } from '../index';
+const os = require('os');
+const fs = require('fs-extra');
+const path = require('path');
+const test = require('ava');
+const nock = require('nock');
+const sinon = require('sinon');
+const AWS = require('aws-sdk');
+const archiver = require('archiver');
+const { runTask, runServiceFromActivity } = require('../index');
 
 test.beforeEach(async(t) => {
   t.context.tempDir = path.join(os.tmpdir(), 'cumulus-ecs-task', `${Date.now()}`, path.sep);

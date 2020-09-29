@@ -22,7 +22,7 @@
   "dependencies": {
     "aws-sdk": "^2.503.0",
     "cliclopts": "^1.1.1",
-    "lodash.isboolean": "^3.0.3",
+    "lodash": "^4.17.20",
     "minimist": "^1.2.5",
     "p-retry": "^2.0.0",
     "respawn": "^2.5.0",
@@ -37,8 +37,8 @@
     "docker:clean": "docker rm -v $(docker ps -a -q -f status=exited); docker rmi $(docker images -f \"dangling=true\" -q); true"
   },
   "devDependencies": {
-    "archiver": "^2.1.1",
-    "ava": "^1.4.1",
+    "archiver": "^5.0.0",
+    "ava": "^3.12.1",
     "babel-eslint": "^10.1.0",
     "eslint": "^6.8.0",
     "eslint-config-airbnb-base": "^14.0.0",

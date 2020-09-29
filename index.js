@@ -3,7 +3,7 @@
 'use strict';
 
 const https = require('https');
-const isBoolean = require('lodash.isboolean');
+const isBoolean = require('lodash/isBoolean');
 const path = require('path');
 const { promisify } = require('util');
 const { exec } = require('child_process');
