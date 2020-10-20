@@ -8,7 +8,6 @@ export VERSION_TAG="v$VERSION_NUMBER"
 export LATEST_TAG=$(curl -H \
   "Authorization: token $GITHUB_TOKEN" \
   https://api.github.com/repos/nasa/cumulus-ecs-task/tags | jq --raw-output '.[0].name')
-PREVIOUS_VERSION=$(npm view @cumulus/cumulus-ecs-task version)
 
 if [ "$VERSION_TAG" != "$LATEST_TAG" ]; then
   echo "tag does not exist for version $VERSION_TAG, creating tag"
@@ -33,16 +32,14 @@ if [ -z "$RELEASE_URL" ]; then
     https://api.github.com/repos/nasa/cumulus-ecs-task/releases
 fi
 
-set -o pipefail
+# Necessary for "docker manifest inspect"
+export DOCKER_CLI_EXPERIMENTAL=enabled
 
-if [ "$VERSION_NUMBER" = "$PREVIOUS_VERSION" ]; then
-  echo "$VERSION_NUMBER already released"
-  exit 0
-fi
-
-if [ "$VERSION_NUMBER" != "$PREVIOUS_VERSION" ]; then
-  npm publish --access public
+if ! docker manifest inspect $IMAGE:$VERSION_NUMBER &> /dev/null; then
+  echo "Docker image $IMAGE:$VERSION_NUMBER does not exist, publishing"
   docker login -u cumulususer -p $DOCKER_PASSWORD
   docker tag $IMAGE:latest $IMAGE:$VERSION_NUMBER
   docker push $IMAGE:$VERSION_NUMBER
+else
+  echo "Docker image $IMAGE:$VERSION_NUMBER already exists"
 fi
