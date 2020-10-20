@@ -1,6 +1,8 @@
 #!/bin/bash
 
 set -ex
+
+IMAGE=cumuluss/cumulus-ecs-task
 export VERSION_NUMBER=$(jq --raw-output .version package.json)
 export VERSION_TAG="v$VERSION_NUMBER"
 export LATEST_TAG=$(curl -H \
@@ -28,4 +30,16 @@ if [ -z "$RELEASE_URL" ]; then
     -H "Content-Type: application/json"\
     -X POST \
     https://api.github.com/repos/nasa/cumulus-ecs-task/releases
+fi
+
+# Necessary for "docker manifest inspect"
+export DOCKER_CLI_EXPERIMENTAL=enabled
+
+if ! docker manifest inspect $IMAGE:$VERSION_NUMBER &> /dev/null; then
+  echo "Docker image $IMAGE:$VERSION_NUMBER does not exist, publishing"
+  docker login -u cumulususer -p $DOCKER_PASSWORD
+  docker tag $IMAGE:latest $IMAGE:$VERSION_NUMBER
+  docker push $IMAGE:$VERSION_NUMBER
+else
+  echo "Docker image $IMAGE:$VERSION_NUMBER already exists"
 fi
