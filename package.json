@@ -20,7 +20,7 @@
   },
   "license": "Apache-2.0",
   "dependencies": {
-    "aws-sdk": "^2.503.0",
+    "aws-sdk": "^2.814.0",
     "cliclopts": "^1.1.1",
     "lodash": "^4.17.20",
     "minimist": "^1.2.5",
