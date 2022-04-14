@@ -7,6 +7,10 @@ project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased]
 
+- **CUMULUS-2920**
+  - Updated CI environment to utilize npm@latest, matching the Dockerfile's implementation
+  - Maintenance update to update package.lock with new npm format.
+  - Update aws-sdk to 2.814 to address vuln report
 ## [v.1.7.0]
 
 ### BREAKING CHANGES
