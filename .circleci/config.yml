@@ -16,7 +16,7 @@ jobs:
       - setup_remote_docker
       - run:
           name: Install
-          command: npm install
+          command: sudo npm install -g npm@latest && npm install
       - run:
           name: Lint
           command: npm run lint
