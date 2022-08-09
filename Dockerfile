@@ -1,4 +1,4 @@
-FROM node:14.19.1-alpine
+FROM node:16.16.0-alpine
 
 RUN npm install -g npm@latest
 
