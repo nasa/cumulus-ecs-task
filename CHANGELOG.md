@@ -8,6 +8,9 @@ project adheres to [Semantic Versioning](http://semver.org/).
 ## [Unreleased]
 - **CUMULUS-3002**
   - Updated node runtime to `16.16.0`
+
+## [v1.8.0]
+
 ### BREAKING CHANGES
 
 - Now uses Node version 14.19.1
@@ -143,7 +146,8 @@ project adheres to [Semantic Versioning](http://semver.org/).
 ### Added
 - Initial release
 
-[Unreleased]: https://github.com/nasa/cumulus-ecs-task/compare/v1.7.0...HEAD
+[Unreleased]: https://github.com/nasa/cumulus-ecs-task/compare/v1.8.0...HEAD
+[v1.8.0]: https://github.com/nasa/cumulus-ecs-task/compare/v1.7.0...v1.8.0
 [v1.7.0]: https://github.com/nasa/cumulus-ecs-task/compare/v1.6.0...v1.7.0
 [v1.6.0]: https://github.com/nasa/cumulus-ecs-task/compare/v1.5.1...v1.6.0
 [v1.5.1]: https://github.com/nasa/cumulus-ecs-task/compare/v1.5.0...v1.5.1
