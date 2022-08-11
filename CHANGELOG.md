@@ -6,7 +6,8 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/) and this
 project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased]
-
+- **CUMULUS-3002**
+  - Updated node runtime to `16.16.0`
 ### BREAKING CHANGES
 
 - Now uses Node version 14.19.1
