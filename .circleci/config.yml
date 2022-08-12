@@ -10,13 +10,14 @@ jobs:
   build:
     docker:
       - image: cimg/node:16.16.0
+        user: circleci
     working_directory: ~/project
     steps:
       - checkout
       - setup_remote_docker
       - run:
           name: Install
-          command: sudo npm install -g npm@latest && npm install
+          command: npm install -g npm@latest && npm install
       - run:
           name: Lint
           command: npm run lint
