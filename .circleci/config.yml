@@ -10,6 +10,7 @@ jobs:
   build:
     docker:
       - image: cimg/node:16.16
+        user: circleci
     working_directory: ~/project
     steps:
       - checkout
