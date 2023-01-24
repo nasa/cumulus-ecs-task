@@ -9,7 +9,7 @@ project adheres to [Semantic Versioning](http://semver.org/).
 
 ### BREAKING CHANGES
 
-- Now uses Node version 16.17.0
+- Now uses Node version 16.19.0
 
 ## [v1.8.0]
 
