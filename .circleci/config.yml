@@ -25,7 +25,7 @@ jobs:
           command: npm run test
       - run:
           name: Build
-          command: rm /usr/bin/python && docker build -t cumuluss/cumulus-ecs-task . 
+          command: docker build -t cumuluss/cumulus-ecs-task . 
       - run:
           name: Deploy
           command: |
