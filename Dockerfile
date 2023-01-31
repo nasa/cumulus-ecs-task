@@ -5,7 +5,7 @@ RUN npm install -g npm@latest
 RUN apk update && \
   apk add unzip && \
   apk add python3 && \
-  rm /usr/bin/python \
+  rm /usr/bin/python && \
   ln -s /usr/bin/python3 /usr/bin/python && \
   rm -rf /var/cache/apk
 
