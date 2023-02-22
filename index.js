@@ -153,7 +153,6 @@ function setCumulusMessageAdapterPath(taskDir, layerDir) {
   process.env.CUMULUS_MESSAGE_ADAPTER_DIR = adapterPath;
 }
 
-
 /**
 * Downloads and extracts the code of a lambda function and it's associated layers
 * into expected locations on the filesystem
@@ -249,7 +248,6 @@ async function getActivityTask(activityArn) {
   log.info('No tasks in the activity queue');
   return undefined;
 }
-
 
 /**
 * Handle the lambda task response
@@ -361,7 +359,6 @@ async function runServiceFromSQS(options) {
   const runForever = isBoolean(options.runForever) ? options.runForever : true;
 
   log.sender = getLogSenderFromLambdaId(lambdaArn);
-
 
   log.info('Downloading the Lambda function');
   const handler = await installLambdaFunction(lambdaArn, workDirectory, taskDirecotry, layersDir);

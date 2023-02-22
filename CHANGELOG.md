@@ -7,6 +7,10 @@ project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased]
 
+### BREAKING CHANGES
+
+- Now uses Node version 16.19.0
+
 ## [v1.8.0]
 
 ### BREAKING CHANGES

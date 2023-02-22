@@ -1,10 +1,11 @@
-FROM node:14.19.1-alpine
+FROM node:16.19.0-alpine
 
 RUN npm install -g npm@latest
 
 RUN apk update && \
   apk add unzip && \
   apk add python3 && \
+  rm /usr/bin/python && \
   ln -s /usr/bin/python3 /usr/bin/python && \
   rm -rf /var/cache/apk
 
