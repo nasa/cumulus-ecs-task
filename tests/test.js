@@ -63,7 +63,6 @@ test.beforeEach(async(t) => {
   t.context.lambdaZipUrlPath = '/lambda';
   t.context.getLayerUrlPath = '/getLayer';
 
-
   nock('https://example.com')
     .get(t.context.lambdaZipUrlPath)
     .reply(200, () => fs.createReadStream(t.context.lambdaZip));
@@ -166,7 +165,6 @@ test.serial('CMA environment variable is set if CMA is present', async(t) => {
   t.is(process.env.CUMULUS_MESSAGE_ADAPTER_DIR,
     `${t.context.taskDirectory}/cumulus-message-adapter`);
 });
-
 
 test.serial('test failed task run', async(t) => {
   const event = { hi: 'bye', error: 'it failed' };
