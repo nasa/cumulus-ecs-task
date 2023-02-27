@@ -139,27 +139,50 @@ sudo start ecs
 
 ## Create a release
 
-To create a release, first make sure the [CHANGELOG.md](CHANGELOG.md) file is
-updated with all the changes made.
+### 1. Create a branch for the new release
 
-Next, bump the version and the changes will automatically be released upon merge
-to master.
+#### From Master
 
-```bash
-npm version <major|minor|patch|specific version>
+Create a branch titled `release-MAJOR.MINOR.PATCH` for the release.
+
+```shell
+    git checkout -b release-MAJOR.MINOR.PATCH
+
+e.g.:
+    git checkout -b release-1.1.0
 ```
 
-Create the build
+### 2. Update the version number
 
 ```bash
-npm run build
+npm version <major|minor|patch|specific version> --no-git-tag-version
 ```
 
-Release to Docker Hub
+### 3. Update CHANGELOG.md
+
+Update the `CHANGELOG.md`. Put a header under the `Unreleased` section with the new version number and the date.
+
+Add a link reference for the github "compare" view at the bottom of the `CHANGELOG.md`, following the existing pattern.
+This link reference should create a link in the CHANGELOG's release header to changes in the corresponding release.
+
+Commit and push these changes.
+
+### 4. Create a pull request against the minor version branch
+
+### 5. Create a git tag for the release
+
+Create and push a new git tag:
 
 ```bash
-npm run release
+    git tag -a vMAJOR.MINOR.PATCH -m "Release MAJOR.MINOR.PATCH"
+    git push origin vMAJOR.MINOR.PATCH
+
+e.g.:
+    git tag -a v1.1.0 -m "Release 1.1.0"
+    git push origin v1.1.0
 ```
+
+Upon the PR is merged to master, the npm package and docker image will be automatically published.
 
 ## Contributing
 
