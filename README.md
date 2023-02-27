@@ -113,6 +113,9 @@ Make sure the EC2 instance has internet access and is able to pull the image
 from docker hub by doing:
 
 ```bash
+docker pull cumuluss/cumulus-ecs-task:<release>
+
+e.g.
 docker pull cumuluss/cumulus-ecs-task:1.9.0
 ```
 
