@@ -167,7 +167,7 @@ This link reference should create a link in the CHANGELOG's release header to ch
 
 Commit and push these changes.
 
-### 4. Create a pull request against the minor version branch
+### 4. Create a pull request against master
 
 ### 5. Create a git tag for the release
 
