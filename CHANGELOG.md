@@ -7,6 +7,8 @@ project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased]
 
+## [v1.9.0]
+
 ### BREAKING CHANGES
 
 - Now uses Node version 16.19.0
@@ -148,7 +150,8 @@ project adheres to [Semantic Versioning](http://semver.org/).
 ### Added
 - Initial release
 
-[Unreleased]: https://github.com/nasa/cumulus-ecs-task/compare/v1.8.0...HEAD
+[Unreleased]: https://github.com/nasa/cumulus-ecs-task/compare/v1.9.0...HEAD
+[v1.9.0]: https://github.com/nasa/cumulus-ecs-task/compare/v1.8.0...v1.9.0
 [v1.8.0]: https://github.com/nasa/cumulus-ecs-task/compare/v1.7.0...v1.8.0
 [v1.7.0]: https://github.com/nasa/cumulus-ecs-task/compare/v1.6.0...v1.7.0
 [v1.6.0]: https://github.com/nasa/cumulus-ecs-task/compare/v1.5.1...v1.6.0
