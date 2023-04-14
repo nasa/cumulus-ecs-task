@@ -166,8 +166,8 @@ function setCumulusMessageAdapterPath(taskDir, layerDir) {
 **/
 async function installLambdaFunction(lambdaArn, workDir, taskDir, layerDir) {
   const resp = await getLambdaSource(lambdaArn, workDir, layerDir);
-  const unzipPromises = resp.layerPaths.map((layerFilePath) => execPromise(`unzip -o ${layerFilePath} -d ${layerDir}`));
-  unzipPromises.push(execPromise(`unzip -o ${resp.filepath} -d ${taskDir}`));
+  const unzipPromises = resp.layerPaths.map((layerFilePath) => execPromise(`unzip -q -o ${layerFilePath} -d ${layerDir}`));
+  unzipPromises.push(execPromise(`unzip -q -o ${resp.filepath} -d ${taskDir}`));
   await Promise.all(unzipPromises);
 
   setCumulusMessageAdapterPath(taskDir, layerDir);

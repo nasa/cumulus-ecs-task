@@ -7,6 +7,11 @@ project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased]
 
+### Fixed
+
+- **CUMULUS-3094**
+  - Updated the unzip command with -q option to prevent listing files to stdout
+
 ## [v1.9.0]
 
 ### BREAKING CHANGES
