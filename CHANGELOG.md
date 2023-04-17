@@ -7,6 +7,8 @@ project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased]
 
+## [v1.9.1] 2023-04-17
+
 ### Fixed
 
 - **CUMULUS-3094**
@@ -155,7 +157,8 @@ project adheres to [Semantic Versioning](http://semver.org/).
 ### Added
 - Initial release
 
-[Unreleased]: https://github.com/nasa/cumulus-ecs-task/compare/v1.9.0...HEAD
+[Unreleased]: https://github.com/nasa/cumulus-ecs-task/compare/v1.9.1...HEAD
+[v1.9.1]: https://github.com/nasa/cumulus-ecs-task/compare/v1.9.0...v1.9.1
 [v1.9.0]: https://github.com/nasa/cumulus-ecs-task/compare/v1.8.0...v1.9.0
 [v1.8.0]: https://github.com/nasa/cumulus-ecs-task/compare/v1.7.0...v1.8.0
 [v1.7.0]: https://github.com/nasa/cumulus-ecs-task/compare/v1.6.0...v1.7.0
