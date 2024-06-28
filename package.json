@@ -20,6 +20,7 @@
   },
   "license": "Apache-2.0",
   "dependencies": {
+    "@aws-sdk/client-sfn": "^3.447.0",
     "@aws-sdk/client-sqs": "^3.447.0",
     "aws-sdk": "^2.814.0",
     "cliclopts": "^1.1.1",
@@ -27,7 +28,8 @@
     "minimist": "^1.2.5",
     "p-retry": "^2.0.0",
     "respawn": "^2.5.0",
-    "rimraf": "^2.6.2"
+    "rimraf": "^2.6.2",
+    "set-interval-async": "^3.0.3"
   },
   "scripts": {
     "test": "ava tests/test.js",
@@ -40,6 +42,7 @@
   "devDependencies": {
     "archiver": "^5.0.0",
     "ava": "^3.12.1",
+    "aws-sdk-client-mock": "^4.0.1",
     "babel-eslint": "^10.1.0",
     "eslint": "^6.8.0",
     "eslint-config-airbnb-base": "^14.0.0",

@@ -12,7 +12,21 @@ const execPromise = promisify(exec);
 const assert = require('assert');
 const pRetry = require('p-retry');
 
+const { 
+  setIntervalAsync, 
+  clearIntervalAsync 
+} = require('set-interval-async');
+
 const AWS = require('aws-sdk');
+const { 
+  GetActivityTaskCommand,
+  SendTaskFailureCommand,
+  SendTaskFailureCommandOutput,
+  SendTaskHeartbeatCommand,
+  SendTaskSuccessCommand,
+  SendTaskSuccessCommandOutput,
+  SFN
+} = require('@aws-sdk/client-sfn');
 const { 
   DeleteMessageCommand,
   ReceiveMessageCommand,
@@ -185,18 +199,22 @@ async function installLambdaFunction(lambdaArn, workDir, taskDir, layerDir) {
 * Starts heartbeat to indicate worker is working on the task
 *
 * @param {string} taskToken - the task token
-* @returns {intervalId} - interval id used by `clearInterval`
+* @param {integer} heartbeatInterval - number of milliseconds between heartbeat messages
+* @returns {SetIntervalAsyncTimer} - interval id used by `clearIntervalAsync`
 **/
-function startHeartbeat(taskToken) {
-  const sf = new AWS.StepFunctions({ apiVersion: '2016-11-23' });
-  return setInterval(() => {
-    sf.sendTaskHeartbeat({ taskToken }, (err) => {
-      if (err) {
-        log.error('error sending heartbeat', err);
-      }
+function startHeartbeat(taskToken, heartbeatInterval) {
+  const sf = new SFN({ apiVersion: '2016-11-23', region });
+  return setIntervalAsync(async () => {
+    try {
+      const sendTaskHeartbeatCommand = new new SendTaskHeartbeatCommand({
+        taskToken
+      });
+      await sf.send(sendTaskHeartbeatCommand);
       log.info(`sending heartbeat, confirming ${taskToken} is still in progress`);
-    }, 60000);
-  });
+    } catch (err) {
+      log.error('error sending heartbeat', err);
+    }
+  }, heartbeatInterval)
 }
 
 /**
@@ -204,15 +222,17 @@ function startHeartbeat(taskToken) {
 *
 * @param {string} taskToken - the task token
 * @param {Object} taskError - the error object returned by the handler
-* @returns {Promise<Object>} - step function send task failure output
+* @returns {SendTaskFailureCommandOutput} - step function send task failure output
 **/
-function sendTaskFailure(taskToken, taskError) {
-  const sf = new AWS.StepFunctions({ apiVersion: '2016-11-23' });
-  return sf.sendTaskFailure({
+async function sendTaskFailure(taskToken, taskError) {
+  const sf = new SFN({ apiVersion: '2016-11-23', region });
+  const sendTaskFailureCommand = new SendTaskFailureCommand({
     taskToken: taskToken,
     error: taskError.name,
     cause: taskError.message
-  }).promise();
+  });
+
+  return await sf.send(sendTaskFailureCommand);
 }
 
 /**
@@ -220,14 +240,16 @@ function sendTaskFailure(taskToken, taskError) {
 *
 * @param {string} taskToken - the task token
 * @param {Object} output - output message for next task
-* @returns {Promise<Object>} - step function send task success output
+* @returns {SendTaskSuccessCommandOutput} - step function send task success output
 **/
-function sendTaskSuccess(taskToken, output) {
-  const sf = new AWS.StepFunctions({ apiVersion: '2016-11-23' });
-  return sf.sendTaskSuccess({
+async function sendTaskSuccess(taskToken, output) {
+  const sf = new SFN({ apiVersion: '2016-11-23', region });
+  const sendTaskSuccessCommand = new SendTaskSuccessCommand({
     taskToken: taskToken,
     output: output
-  }).promise();
+  });
+  
+  return await sf.send(sendTaskSuccessCommand);
 }
 
 /**
@@ -239,8 +261,8 @@ function sendTaskSuccess(taskToken, output) {
 *                    empty, the function returns undefined response
 **/
 async function getActivityTask(activityArn) {
-  const sf = new AWS.StepFunctions({ apiVersion: '2016-11-23' });
-  const data = await sf.getActivityTask({ activityArn }).promise();
+  const sf = new SFN({ apiVersion: '2016-11-23', region });
+  const data = await sf.send(new GetActivityTaskCommand({ activityArn }));
 
   if (data && data.taskToken && data.taskToken.length && data.input) {
     const token = data.taskToken;
@@ -279,13 +301,13 @@ async function handlePollResponse(event, taskToken, handler, heartbeatInterval) 
   let heartbeat;
 
   if (heartbeatInterval) {
-    heartbeat = startHeartbeat(taskToken);
+    heartbeat = startHeartbeat(taskToken, heartbeatInterval);
   }
 
   try {
     const output = await handleResponse(event, handler);
     if (heartbeatInterval) {
-      clearInterval(heartbeat);
+      await clearIntervalAsync(heartbeat);
     }
     await sendTaskSuccess(taskToken, JSON.stringify(output));
   }
