@@ -13,6 +13,11 @@ const assert = require('assert');
 const pRetry = require('p-retry');
 
 const AWS = require('aws-sdk');
+const { 
+  DeleteMessageCommand,
+  ReceiveMessageCommand,
+  SQS 
+} = require('@aws-sdk/client-sqs');
 const fs = require('fs');
 
 const Logger = require('./Logger');
@@ -349,8 +354,8 @@ async function runServiceFromSQS(options) {
   assert(options.workDirectory && typeof options.workDirectory === 'string', 'options.workDirectory string is required');
   assert(!options.layersDirectory || typeof options.layersDirectory === 'string', 'options.layersDir should be a string');
 
-  const sqs = new AWS.SQS({ apiVersion: '2016-11-23' });
-
+  const sqs = new SQS({ region });
+  
   const {
     lambdaArn, sqsUrl, taskDirecotry, workDirectory
   } = options;
@@ -374,10 +379,10 @@ async function runServiceFromSQS(options) {
   do {
     try {
       log.info(`[${counter}] Getting tasks from ${sqsUrl}`);
-      const resp = await sqs.receiveMessage({
+      const resp = await sqs.send(new ReceiveMessageCommand({
         QueueUrl: sqsUrl,
         WaitTimeSeconds: 20
-      }).promise();
+      }));
       const messages = resp.Messages;
       if (messages) {
         const promises = messages.map(async(message) => {
@@ -389,7 +394,10 @@ async function runServiceFromSQS(options) {
 
             // remove the message from queue
             log.info(`message with handler ${receipt} deleted from the queue`);
-            await sqs.deleteMessage({ QueueUrl: sqsUrl, ReceiptHandle: receipt }).promise();
+            await sqs.deleteMessage(new DeleteMessageCommand({ 
+              QueueUrl: sqsUrl, 
+              ReceiptHandle: receipt 
+            }));
           }
           return undefined;
         });
