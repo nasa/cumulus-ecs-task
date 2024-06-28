@@ -6,7 +6,6 @@ const path = require('path');
 const test = require('ava');
 const nock = require('nock');
 const sinon = require('sinon');
-const AWS = require('aws-sdk');
 const archiver = require('archiver');
 const { runTask, runServiceFromActivity } = require('../index');
 const { mockClient } = require('aws-sdk-client-mock');

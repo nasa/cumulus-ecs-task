@@ -17,7 +17,6 @@ const {
   clearIntervalAsync 
 } = require('set-interval-async');
 
-const AWS = require('aws-sdk');
 const {
   Lambda, 
   GetFunctionCommand,
@@ -44,8 +43,6 @@ const log = new Logger();
 
 const region = process.env.AWS_DEFAULT_REGION || 'us-east-1';
 const layersDefaultDirectory = '/opt/';
-
-AWS.config.update({ region: region });
 
 // eslint-disable-next-line require-jsdoc
 const isLambdaFunctionArn = (id) => id.startsWith('arn:aws:lambda');
