@@ -7,6 +7,14 @@ project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased]
 
+### BREAKING CHANGES
+
+- Now uses Node version 20.12.2 and changes the base Docker image to `amazon/aws-lambda-nodejs:20`.
+
+- **CUMULUS-3776**
+  - Updated to use Node v20.12.2
+  - Updated to use aws-sdk v3 and uses the v3 Command syntax
+
 ## [v1.9.1] 2023-04-17
 
 ### Fixed
