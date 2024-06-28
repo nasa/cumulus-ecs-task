@@ -20,6 +20,7 @@
   },
   "license": "Apache-2.0",
   "dependencies": {
+    "@aws-sdk/client-lambda": "^3.447.0",
     "@aws-sdk/client-sfn": "^3.447.0",
     "@aws-sdk/client-sqs": "^3.447.0",
     "aws-sdk": "^2.814.0",

@@ -10,12 +10,19 @@ const AWS = require('aws-sdk');
 const archiver = require('archiver');
 const { runTask, runServiceFromActivity } = require('../index');
 const { mockClient } = require('aws-sdk-client-mock');
+const {
+  Lambda,
+  GetLayerVersionByArnCommand,
+  GetFunctionCommand
+} = require('@aws-sdk/client-lambda');
 const { 
   GetActivityTaskCommand, 
   SendTaskSuccessCommand,
   SFN, 
   SendTaskFailureCommand
 } = require('@aws-sdk/client-sfn');
+
+const lambdaMock = mockClient(Lambda);
 
 test.beforeEach(async(t) => {
   t.context.tempDir = path.join(os.tmpdir(), 'cumulus-ecs-task', `${Date.now()}`, path.sep);
@@ -83,38 +90,79 @@ test.beforeEach(async(t) => {
     'handler'
   ];
 
-  t.context.stub = sinon.stub(AWS, 'Lambda')
-    .returns({
-      getLayerVersionByArn: () => ({
-        promise: async() => ({
-          LayerArn: 'notARealArn',
-          Content: {
-            Location: `https://example.com${t.context.getLayerUrlPath}`
-          }
-        })
-      }),
-      getFunction: () => ({
-        promise: async() => ({
-          Code: {
-            Location: `https://example.com${t.context.lambdaZipUrlPath}`
-          },
-          Configuration: {
-            Handler: t.context.expectedOutput.join('.'),
-            Layers: ['notARealArn']
-          }
-        })
-      })
+  lambdaMock
+    .onAnyCommand()
+    .rejects()
+    .on(GetLayerVersionByArnCommand)
+    .resolves({
+      LayerArn: 'notARealArn',
+      Content: {
+        Location: `https://example.com${t.context.getLayerUrlPath}`
+      }
+    })
+    .on(GetFunctionCommand)
+    .resolves({
+      Code: {
+        Location: `https://example.com${t.context.lambdaZipUrlPath}`
+      },
+      Configuration: {
+        Handler: t.context.expectedOutput.join('.'),
+        Layers: ['notARealArn']
+      }
     });
+  //   .returns({
+  //     getLayerVersionByArn: () => ({
+  //       promise: async() => ({
+  //         LayerArn: 'notARealArn',
+  //         Content: {
+  //           Location: `https://example.com${t.context.getLayerUrlPath}`
+  //         }
+  //       })
+  //     }),
+  //     getFunction: () => ({
+  //       promise: async() => ({
+  //         Code: {
+  //           Location: `https://example.com${t.context.lambdaZipUrlPath}`
+  //         },
+  //         Configuration: {
+  //           Handler: t.context.expectedOutput.join('.'),
+  //           Layers: ['notARealArn']
+  //         }
+  //       })
+  //     })
+  //   });
 });
 
 test.afterEach.always((t) => {
   nock.cleanAll();
-  t.context.stub.restore();
+  lambdaMock.reset();
   fs.removeSync(t.context.tempDir);
 });
 
 test.serial('test successful task run', async(t) => {
   const event = { hi: 'bye' };
+
+  const lambdaMock = mockClient(Lambda);
+  lambdaMock
+    .onAnyCommand()
+    .rejects()
+    .on(GetLayerVersionByArnCommand)
+    .resolves({
+      LayerArn: 'notARealArn',
+      Content: {
+        Location: `https://example.com${t.context.getLayerUrlPath}`
+      }
+    })
+    .on(GetFunctionCommand)
+    .resolves({
+      Code: {
+        Location: `https://example.com${t.context.lambdaZipUrlPath}`
+      },
+      Configuration: {
+        Handler: t.context.expectedOutput.join('.'),
+        Layers: ['notARealArn']
+      }
+    });
 
   const output = await runTask({
     lambdaArn: 'arn:aws:lambda:region:account-id:function:fake-function',

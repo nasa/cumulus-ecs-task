@@ -18,6 +18,11 @@ const {
 } = require('set-interval-async');
 
 const AWS = require('aws-sdk');
+const {
+  Lambda, 
+  GetFunctionCommand,
+  GetLayerVersionByArnCommand
+} = require('@aws-sdk/client-lambda');
 const { 
   GetActivityTaskCommand,
   SendTaskFailureCommand,
@@ -127,9 +132,9 @@ async function downloadLayers(layers, layersDir) {
 * The `layerPaths` is an array of filepaths to downloaded layer zip files
 **/
 async function getLambdaSource(arn, workDir, layersDir) {
-  const lambda = new AWS.Lambda({ apiVersion: '2015-03-31' });
+  const lambda = new Lambda({ apiVersion: '2015-03-31', region });
 
-  const data = await lambda.getFunction({ FunctionName: arn }).promise();
+  const data = await lambda.send(new GetFunctionCommand({ FunctionName: arn }));
 
   const codeUrl = data.Code.Location;
   const handlerId = data.Configuration.Handler;
@@ -140,8 +145,13 @@ async function getLambdaSource(arn, workDir, layersDir) {
   let layerPaths = [];
   if (data.Configuration.Layers) {
     const layers = data.Configuration.Layers;
-    const layerConfigPromises = layers.map((layer) => lambda.getLayerVersionByArn({ Arn: layer.Arn }).promise());
-    const layerConfigs = await Promise.all(layerConfigPromises);
+    const layerConfigs = await Promise.all(
+      layers.map(async (layer) => {
+        const getLayerVersionByArnCommand = new GetLayerVersionByArnCommand({ Arn: layer.Arn });
+        return await lambda.send(getLayerVersionByArnCommand);
+      })
+    ); 
+    
     layerPaths = await downloadLayers(layerConfigs, layersDir);
   }
 
