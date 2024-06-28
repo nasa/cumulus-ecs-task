@@ -6,19 +6,19 @@ const path = require('path');
 const test = require('ava');
 const nock = require('nock');
 const archiver = require('archiver');
-const { runTask, runServiceFromActivity } = require('../index');
 const { mockClient } = require('aws-sdk-client-mock');
 const {
   Lambda,
   GetLayerVersionByArnCommand,
   GetFunctionCommand
 } = require('@aws-sdk/client-lambda');
-const { 
-  GetActivityTaskCommand, 
+const {
+  GetActivityTaskCommand,
   SendTaskSuccessCommand,
-  SFN, 
+  SFN,
   SendTaskFailureCommand
 } = require('@aws-sdk/client-sfn');
+const { runTask, runServiceFromActivity } = require('../index');
 
 const lambdaMock = mockClient(Lambda);
 
@@ -140,28 +140,6 @@ test.afterEach.always((t) => {
 test.serial('test successful task run', async(t) => {
   const event = { hi: 'bye' };
 
-  const lambdaMock = mockClient(Lambda);
-  lambdaMock
-    .onAnyCommand()
-    .rejects()
-    .on(GetLayerVersionByArnCommand)
-    .resolves({
-      LayerArn: 'notARealArn',
-      Content: {
-        Location: `https://example.com${t.context.getLayerUrlPath}`
-      }
-    })
-    .on(GetFunctionCommand)
-    .resolves({
-      Code: {
-        Location: `https://example.com${t.context.lambdaZipUrlPath}`
-      },
-      Configuration: {
-        Handler: t.context.expectedOutput.join('.'),
-        Layers: ['notARealArn']
-      }
-    });
-
   const output = await runTask({
     lambdaArn: 'arn:aws:lambda:region:account-id:function:fake-function',
     lambdaInput: event,
@@ -247,10 +225,10 @@ test.serial('test activity success', async(t) => {
       input: JSON.stringify(input)
     })
     .on(SendTaskSuccessCommand)
-    .callsFake(msg => {
+    .callsFake((msg) => {
       t.is(msg.output, JSON.stringify(input));
       t.is(msg.taskToken, token);
-      
+
       return Promise.resolve();
     });
 
@@ -283,10 +261,10 @@ test.serial('test activity failure', async(t) => {
       input: JSON.stringify(input)
     })
     .on(SendTaskFailureCommand)
-    .callsFake(msg => {
+    .callsFake((msg) => {
       t.is(msg.error, 'Error');
       t.is(msg.cause, input.error);
-      
+
       return Promise.resolve();
     });
 
