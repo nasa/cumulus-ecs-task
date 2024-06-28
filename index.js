@@ -12,34 +12,37 @@ const execPromise = promisify(exec);
 const assert = require('assert');
 const pRetry = require('p-retry');
 
-const { 
-  setIntervalAsync, 
-  clearIntervalAsync 
+const {
+  setIntervalAsync,
+  clearIntervalAsync
 } = require('set-interval-async');
 
 const {
-  Lambda, 
+  Lambda,
   GetFunctionCommand,
   GetLayerVersionByArnCommand
 } = require('@aws-sdk/client-lambda');
-const { 
+const {
   GetActivityTaskCommand,
   SendTaskFailureCommand,
-  SendTaskFailureCommandOutput,
   SendTaskHeartbeatCommand,
   SendTaskSuccessCommand,
-  SendTaskSuccessCommandOutput,
   SFN
 } = require('@aws-sdk/client-sfn');
-const { 
+const {
   DeleteMessageCommand,
   ReceiveMessageCommand,
-  SQS 
+  SQS
 } = require('@aws-sdk/client-sqs');
 const fs = require('fs');
 
 const Logger = require('./Logger');
 const log = new Logger();
+
+/**
+ * @typedef {import('@aws-sdk/client-sfn').SendTaskFailureCommandOutput} SendTaskFailureCommandOutput
+ * @typedef {import('@aws-sdk/client-sfn').SendTaskSuccessCommandOutput} SendTaskSuccessCommandOutput
+ */
 
 const region = process.env.AWS_DEFAULT_REGION || 'us-east-1';
 const layersDefaultDirectory = '/opt/';
@@ -143,12 +146,12 @@ async function getLambdaSource(arn, workDir, layersDir) {
   if (data.Configuration.Layers) {
     const layers = data.Configuration.Layers;
     const layerConfigs = await Promise.all(
-      layers.map(async (layer) => {
+      layers.map(async(layer) => {
         const getLayerVersionByArnCommand = new GetLayerVersionByArnCommand({ Arn: layer.Arn });
-        return await lambda.send(getLayerVersionByArnCommand);
+        return lambda.send(getLayerVersionByArnCommand);
       })
-    ); 
-    
+    );
+
     layerPaths = await downloadLayers(layerConfigs, layersDir);
   }
 
@@ -211,17 +214,18 @@ async function installLambdaFunction(lambdaArn, workDir, taskDir, layerDir) {
 **/
 function startHeartbeat(taskToken, heartbeatInterval) {
   const sf = new SFN({ apiVersion: '2016-11-23', region });
-  return setIntervalAsync(async () => {
+  return setIntervalAsync(async() => {
     try {
-      const sendTaskHeartbeatCommand = new new SendTaskHeartbeatCommand({
+      const sendTaskHeartbeatCommand = new SendTaskHeartbeatCommand({
         taskToken
       });
       await sf.send(sendTaskHeartbeatCommand);
       log.info(`sending heartbeat, confirming ${taskToken} is still in progress`);
-    } catch (err) {
+    }
+    catch (err) {
       log.error('error sending heartbeat', err);
     }
-  }, heartbeatInterval)
+  }, heartbeatInterval);
 }
 
 /**
@@ -239,7 +243,7 @@ async function sendTaskFailure(taskToken, taskError) {
     cause: taskError.message
   });
 
-  return await sf.send(sendTaskFailureCommand);
+  return sf.send(sendTaskFailureCommand);
 }
 
 /**
@@ -255,8 +259,8 @@ async function sendTaskSuccess(taskToken, output) {
     taskToken: taskToken,
     output: output
   });
-  
-  return await sf.send(sendTaskSuccessCommand);
+
+  return sf.send(sendTaskSuccessCommand);
 }
 
 /**
@@ -384,7 +388,7 @@ async function runServiceFromSQS(options) {
   assert(!options.layersDirectory || typeof options.layersDirectory === 'string', 'options.layersDir should be a string');
 
   const sqs = new SQS({ region });
-  
+
   const {
     lambdaArn, sqsUrl, taskDirecotry, workDirectory
   } = options;
@@ -423,9 +427,9 @@ async function runServiceFromSQS(options) {
 
             // remove the message from queue
             log.info(`message with handler ${receipt} deleted from the queue`);
-            await sqs.deleteMessage(new DeleteMessageCommand({ 
-              QueueUrl: sqsUrl, 
-              ReceiptHandle: receipt 
+            await sqs.deleteMessage(new DeleteMessageCommand({
+              QueueUrl: sqsUrl,
+              ReceiptHandle: receipt
             }));
           }
           return undefined;
