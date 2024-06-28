@@ -5,7 +5,6 @@ const fs = require('fs-extra');
 const path = require('path');
 const test = require('ava');
 const nock = require('nock');
-const sinon = require('sinon');
 const archiver = require('archiver');
 const { runTask, runServiceFromActivity } = require('../index');
 const { mockClient } = require('aws-sdk-client-mock');
