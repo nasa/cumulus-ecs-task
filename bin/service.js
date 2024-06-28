@@ -90,6 +90,14 @@ rimraf.sync(argv.workDirectory);
 fs.mkdirSync(argv.taskDirectory);
 fs.mkdirSync(argv.workDirectory);
 
+// Copies the runtime node_modules to our task directory. This is necessary to make sure
+// we get the same depenencies available to us as in the Lambda environment.
+fs.cpSync(
+  '/var/runtime/node_modules', 
+  path.join(argv.taskDirectory, 'node_modules'), 
+  { recursive: true }
+);
+
 if (argv.activityArn) {
   runServiceFromActivity(argv).catch(console.error);
 }

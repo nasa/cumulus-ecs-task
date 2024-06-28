@@ -7,7 +7,7 @@
     "cumulus-ecs-task": "index.js"
   },
   "engines": {
-    "node": ">=16.19.0"
+    "node": ">=20.12.2"
   },
   "keywords": [
     "CUMULUS",
@@ -48,7 +48,7 @@
     "eslint-plugin-react": "^7.19.0",
     "fs-extra": "^7.0.0",
     "jsonfilter": "^1.1.2",
-    "nock": "^9.6.1",
+    "nock": "^13.5.4",
     "sinon": "^6.1.5"
   }
 }
