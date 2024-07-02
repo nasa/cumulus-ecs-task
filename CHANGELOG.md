@@ -7,6 +7,8 @@ project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased]
 
+## [v2.1.0] 2024-07-02
+
 ### BREAKING CHANGES
 
 - Now uses Node version 20.12.2 and changes the base Docker image to `amazon/aws-lambda-nodejs:20`.
@@ -165,7 +167,8 @@ project adheres to [Semantic Versioning](http://semver.org/).
 ### Added
 - Initial release
 
-[Unreleased]: https://github.com/nasa/cumulus-ecs-task/compare/v1.9.1...HEAD
+[Unreleased]: https://github.com/nasa/cumulus-ecs-task/compare/v2.1.0...HEAD
+[v2.1.0]: https://github.com/nasa/cumulus-ecs-task/compare/v1.9.1...v2.1.0
 [v1.9.1]: https://github.com/nasa/cumulus-ecs-task/compare/v1.9.0...v1.9.1
 [v1.9.0]: https://github.com/nasa/cumulus-ecs-task/compare/v1.8.0...v1.9.0
 [v1.8.0]: https://github.com/nasa/cumulus-ecs-task/compare/v1.7.0...v1.8.0
