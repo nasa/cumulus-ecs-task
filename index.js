@@ -12,16 +12,40 @@ const execPromise = promisify(exec);
 const assert = require('assert');
 const pRetry = require('p-retry');
 
-const AWS = require('aws-sdk');
+const {
+  setIntervalAsync,
+  clearIntervalAsync
+} = require('set-interval-async');
+
+const {
+  Lambda,
+  GetFunctionCommand,
+  GetLayerVersionByArnCommand
+} = require('@aws-sdk/client-lambda');
+const {
+  GetActivityTaskCommand,
+  SendTaskFailureCommand,
+  SendTaskHeartbeatCommand,
+  SendTaskSuccessCommand,
+  SFN
+} = require('@aws-sdk/client-sfn');
+const {
+  DeleteMessageCommand,
+  ReceiveMessageCommand,
+  SQS
+} = require('@aws-sdk/client-sqs');
 const fs = require('fs');
 
 const Logger = require('./Logger');
 const log = new Logger();
 
+/**
+ * @typedef {import('@aws-sdk/client-sfn').SendTaskFailureCommandOutput} SendTaskFailureCommandOutput
+ * @typedef {import('@aws-sdk/client-sfn').SendTaskSuccessCommandOutput} SendTaskSuccessCommandOutput
+ */
+
 const region = process.env.AWS_DEFAULT_REGION || 'us-east-1';
 const layersDefaultDirectory = '/opt/';
-
-AWS.config.update({ region: region });
 
 // eslint-disable-next-line require-jsdoc
 const isLambdaFunctionArn = (id) => id.startsWith('arn:aws:lambda');
@@ -108,9 +132,9 @@ async function downloadLayers(layers, layersDir) {
 * The `layerPaths` is an array of filepaths to downloaded layer zip files
 **/
 async function getLambdaSource(arn, workDir, layersDir) {
-  const lambda = new AWS.Lambda({ apiVersion: '2015-03-31' });
+  const lambda = new Lambda({ apiVersion: '2015-03-31', region });
 
-  const data = await lambda.getFunction({ FunctionName: arn }).promise();
+  const data = await lambda.send(new GetFunctionCommand({ FunctionName: arn }));
 
   const codeUrl = data.Code.Location;
   const handlerId = data.Configuration.Handler;
@@ -121,8 +145,13 @@ async function getLambdaSource(arn, workDir, layersDir) {
   let layerPaths = [];
   if (data.Configuration.Layers) {
     const layers = data.Configuration.Layers;
-    const layerConfigPromises = layers.map((layer) => lambda.getLayerVersionByArn({ Arn: layer.Arn }).promise());
-    const layerConfigs = await Promise.all(layerConfigPromises);
+    const layerConfigs = await Promise.all(
+      layers.map(async(layer) => {
+        const getLayerVersionByArnCommand = new GetLayerVersionByArnCommand({ Arn: layer.Arn });
+        return lambda.send(getLayerVersionByArnCommand);
+      })
+    );
+
     layerPaths = await downloadLayers(layerConfigs, layersDir);
   }
 
@@ -179,19 +208,28 @@ async function installLambdaFunction(lambdaArn, workDir, taskDir, layerDir) {
 /**
 * Starts heartbeat to indicate worker is working on the task
 *
+* ppilone - Refactored this as part of the aws-sdk v3 update but it was previously not working
+* and the code is over 6 years old. Not sure of the original intent or if it was ever actually used.
+* Might want to consider removing it entirely or adding test coverage if it is in fact used.
+*
 * @param {string} taskToken - the task token
-* @returns {intervalId} - interval id used by `clearInterval`
+* @param {integer} heartbeatInterval - number of milliseconds between heartbeat messages
+* @returns {SetIntervalAsyncTimer} - interval id used by `clearIntervalAsync`
 **/
-function startHeartbeat(taskToken) {
-  const sf = new AWS.StepFunctions({ apiVersion: '2016-11-23' });
-  return setInterval(() => {
-    sf.sendTaskHeartbeat({ taskToken }, (err) => {
-      if (err) {
-        log.error('error sending heartbeat', err);
-      }
+function startHeartbeat(taskToken, heartbeatInterval) {
+  const sf = new SFN({ apiVersion: '2016-11-23', region });
+  return setIntervalAsync(async() => {
+    try {
+      const sendTaskHeartbeatCommand = new SendTaskHeartbeatCommand({
+        taskToken
+      });
+      await sf.send(sendTaskHeartbeatCommand);
       log.info(`sending heartbeat, confirming ${taskToken} is still in progress`);
-    }, 60000);
-  });
+    }
+    catch (err) {
+      log.error('error sending heartbeat', err);
+    }
+  }, heartbeatInterval);
 }
 
 /**
@@ -199,15 +237,17 @@ function startHeartbeat(taskToken) {
 *
 * @param {string} taskToken - the task token
 * @param {Object} taskError - the error object returned by the handler
-* @returns {Promise<Object>} - step function send task failure output
+* @returns {SendTaskFailureCommandOutput} - step function send task failure output
 **/
-function sendTaskFailure(taskToken, taskError) {
-  const sf = new AWS.StepFunctions({ apiVersion: '2016-11-23' });
-  return sf.sendTaskFailure({
+async function sendTaskFailure(taskToken, taskError) {
+  const sf = new SFN({ apiVersion: '2016-11-23', region });
+  const sendTaskFailureCommand = new SendTaskFailureCommand({
     taskToken: taskToken,
     error: taskError.name,
     cause: taskError.message
-  }).promise();
+  });
+
+  return sf.send(sendTaskFailureCommand);
 }
 
 /**
@@ -215,14 +255,16 @@ function sendTaskFailure(taskToken, taskError) {
 *
 * @param {string} taskToken - the task token
 * @param {Object} output - output message for next task
-* @returns {Promise<Object>} - step function send task success output
+* @returns {SendTaskSuccessCommandOutput} - step function send task success output
 **/
-function sendTaskSuccess(taskToken, output) {
-  const sf = new AWS.StepFunctions({ apiVersion: '2016-11-23' });
-  return sf.sendTaskSuccess({
+async function sendTaskSuccess(taskToken, output) {
+  const sf = new SFN({ apiVersion: '2016-11-23', region });
+  const sendTaskSuccessCommand = new SendTaskSuccessCommand({
     taskToken: taskToken,
     output: output
-  }).promise();
+  });
+
+  return sf.send(sendTaskSuccessCommand);
 }
 
 /**
@@ -234,8 +276,8 @@ function sendTaskSuccess(taskToken, output) {
 *                    empty, the function returns undefined response
 **/
 async function getActivityTask(activityArn) {
-  const sf = new AWS.StepFunctions({ apiVersion: '2016-11-23' });
-  const data = await sf.getActivityTask({ activityArn }).promise();
+  const sf = new SFN({ apiVersion: '2016-11-23', region });
+  const data = await sf.send(new GetActivityTaskCommand({ activityArn }));
 
   if (data && data.taskToken && data.taskToken.length && data.input) {
     const token = data.taskToken;
@@ -274,13 +316,13 @@ async function handlePollResponse(event, taskToken, handler, heartbeatInterval) 
   let heartbeat;
 
   if (heartbeatInterval) {
-    heartbeat = startHeartbeat(taskToken);
+    heartbeat = startHeartbeat(taskToken, heartbeatInterval);
   }
 
   try {
     const output = await handleResponse(event, handler);
     if (heartbeatInterval) {
-      clearInterval(heartbeat);
+      await clearIntervalAsync(heartbeat);
     }
     await sendTaskSuccess(taskToken, JSON.stringify(output));
   }
@@ -349,7 +391,7 @@ async function runServiceFromSQS(options) {
   assert(options.workDirectory && typeof options.workDirectory === 'string', 'options.workDirectory string is required');
   assert(!options.layersDirectory || typeof options.layersDirectory === 'string', 'options.layersDir should be a string');
 
-  const sqs = new AWS.SQS({ apiVersion: '2016-11-23' });
+  const sqs = new SQS({ region });
 
   const {
     lambdaArn, sqsUrl, taskDirecotry, workDirectory
@@ -374,10 +416,10 @@ async function runServiceFromSQS(options) {
   do {
     try {
       log.info(`[${counter}] Getting tasks from ${sqsUrl}`);
-      const resp = await sqs.receiveMessage({
+      const resp = await sqs.send(new ReceiveMessageCommand({
         QueueUrl: sqsUrl,
         WaitTimeSeconds: 20
-      }).promise();
+      }));
       const messages = resp.Messages;
       if (messages) {
         const promises = messages.map(async(message) => {
@@ -389,7 +431,10 @@ async function runServiceFromSQS(options) {
 
             // remove the message from queue
             log.info(`message with handler ${receipt} deleted from the queue`);
-            await sqs.deleteMessage({ QueueUrl: sqsUrl, ReceiptHandle: receipt }).promise();
+            await sqs.deleteMessage(new DeleteMessageCommand({
+              QueueUrl: sqsUrl,
+              ReceiptHandle: receipt
+            }));
           }
           return undefined;
         });

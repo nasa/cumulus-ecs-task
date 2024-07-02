@@ -9,7 +9,7 @@ workflows:
 jobs:
   build:
     docker:
-      - image: cimg/node:16.19.0
+      - image: cimg/node:20.12.2
     working_directory: ~/project
     steps:
       - checkout

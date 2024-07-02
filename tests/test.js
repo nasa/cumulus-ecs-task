@@ -5,10 +5,22 @@ const fs = require('fs-extra');
 const path = require('path');
 const test = require('ava');
 const nock = require('nock');
-const sinon = require('sinon');
-const AWS = require('aws-sdk');
 const archiver = require('archiver');
+const { mockClient } = require('aws-sdk-client-mock');
+const {
+  Lambda,
+  GetLayerVersionByArnCommand,
+  GetFunctionCommand
+} = require('@aws-sdk/client-lambda');
+const {
+  GetActivityTaskCommand,
+  SendTaskSuccessCommand,
+  SFN,
+  SendTaskFailureCommand
+} = require('@aws-sdk/client-sfn');
 const { runTask, runServiceFromActivity } = require('../index');
+
+const lambdaMock = mockClient(Lambda);
 
 test.beforeEach(async(t) => {
   t.context.tempDir = path.join(os.tmpdir(), 'cumulus-ecs-task', `${Date.now()}`, path.sep);
@@ -76,33 +88,31 @@ test.beforeEach(async(t) => {
     'handler'
   ];
 
-  t.context.stub = sinon.stub(AWS, 'Lambda')
-    .returns({
-      getLayerVersionByArn: () => ({
-        promise: async() => ({
-          LayerArn: 'notARealArn',
-          Content: {
-            Location: `https://example.com${t.context.getLayerUrlPath}`
-          }
-        })
-      }),
-      getFunction: () => ({
-        promise: async() => ({
-          Code: {
-            Location: `https://example.com${t.context.lambdaZipUrlPath}`
-          },
-          Configuration: {
-            Handler: t.context.expectedOutput.join('.'),
-            Layers: ['notARealArn']
-          }
-        })
-      })
+  lambdaMock
+    .onAnyCommand()
+    .rejects()
+    .on(GetLayerVersionByArnCommand)
+    .resolves({
+      LayerArn: 'notARealArn',
+      Content: {
+        Location: `https://example.com${t.context.getLayerUrlPath}`
+      }
+    })
+    .on(GetFunctionCommand)
+    .resolves({
+      Code: {
+        Location: `https://example.com${t.context.lambdaZipUrlPath}`
+      },
+      Configuration: {
+        Handler: t.context.expectedOutput.join('.'),
+        Layers: ['notARealArn']
+      }
     });
 });
 
 test.afterEach.always((t) => {
   nock.cleanAll();
-  t.context.stub.restore();
+  lambdaMock.reset();
   fs.removeSync(t.context.tempDir);
 });
 
@@ -184,21 +194,21 @@ test.serial('test activity success', async(t) => {
   };
   const token = 'some token';
 
-  const sf = sinon.stub(AWS, 'StepFunctions')
-    .returns({
-      getActivityTask: () => ({
-        promise: async() => ({
-          taskToken: token,
-          input: JSON.stringify(input)
-        })
-      }),
-      sendTaskSuccess: (msg) => ({
-        promise: () => {
-          t.is(msg.output, JSON.stringify(input));
-          t.is(msg.taskToken, token);
-          return Promise.resolve();
-        }
-      })
+  const sfnMock = mockClient(SFN);
+  sfnMock
+    .onAnyCommand()
+    .rejects()
+    .on(GetActivityTaskCommand)
+    .resolves({
+      taskToken: token,
+      input: JSON.stringify(input)
+    })
+    .on(SendTaskSuccessCommand)
+    .callsFake((msg) => {
+      t.is(msg.output, JSON.stringify(input));
+      t.is(msg.taskToken, token);
+
+      return Promise.resolve();
     });
 
   await runServiceFromActivity({
@@ -210,7 +220,7 @@ test.serial('test activity success', async(t) => {
     runForever: false
   });
 
-  sf.restore();
+  sfnMock.restore();
 });
 
 test.serial('test activity failure', async(t) => {
@@ -220,21 +230,21 @@ test.serial('test activity failure', async(t) => {
   };
   const token = 'some token';
 
-  const sf = sinon.stub(AWS, 'StepFunctions')
-    .returns({
-      getActivityTask: () => ({
-        promise: async() => ({
-          taskToken: token,
-          input: JSON.stringify(input)
-        })
-      }),
-      sendTaskFailure: (msg) => ({
-        promise: () => {
-          t.is(msg.error, 'Error');
-          t.is(msg.cause, input.error);
-          return Promise.resolve();
-        }
-      })
+  const sfnMock = mockClient(SFN);
+  sfnMock
+    .onAnyCommand()
+    .rejects()
+    .on(GetActivityTaskCommand)
+    .resolves({
+      taskToken: token,
+      input: JSON.stringify(input)
+    })
+    .on(SendTaskFailureCommand)
+    .callsFake((msg) => {
+      t.is(msg.error, 'Error');
+      t.is(msg.cause, input.error);
+
+      return Promise.resolve();
     });
 
   await runServiceFromActivity({
@@ -246,7 +256,7 @@ test.serial('test activity failure', async(t) => {
     runForever: false
   });
 
-  sf.restore();
+  sfnMock.restore();
 });
 
 test.serial('Retry zip download if connection-timeout received', async(t) => {
