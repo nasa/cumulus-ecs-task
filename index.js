@@ -208,6 +208,10 @@ async function installLambdaFunction(lambdaArn, workDir, taskDir, layerDir) {
 /**
 * Starts heartbeat to indicate worker is working on the task
 *
+* ppilone - Refactored this as part of the aws-sdk v3 update but it was previously not working
+* and the code is over 6 years old. Not sure of the original intent or if it was ever actually used.
+* Might want to consider removing it entirely or adding test coverage if it is in fact used.
+*
 * @param {string} taskToken - the task token
 * @param {integer} heartbeatInterval - number of milliseconds between heartbeat messages
 * @returns {SetIntervalAsyncTimer} - interval id used by `clearIntervalAsync`
