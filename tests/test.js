@@ -108,27 +108,6 @@ test.beforeEach(async(t) => {
         Layers: ['notARealArn']
       }
     });
-  //   .returns({
-  //     getLayerVersionByArn: () => ({
-  //       promise: async() => ({
-  //         LayerArn: 'notARealArn',
-  //         Content: {
-  //           Location: `https://example.com${t.context.getLayerUrlPath}`
-  //         }
-  //       })
-  //     }),
-  //     getFunction: () => ({
-  //       promise: async() => ({
-  //         Code: {
-  //           Location: `https://example.com${t.context.lambdaZipUrlPath}`
-  //         },
-  //         Configuration: {
-  //           Handler: t.context.expectedOutput.join('.'),
-  //           Layers: ['notARealArn']
-  //         }
-  //       })
-  //     })
-  //   });
 });
 
 test.afterEach.always((t) => {
