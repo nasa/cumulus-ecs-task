@@ -7,6 +7,11 @@ project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased]
 
+### Fixed
+
+- **CUMULUS-5380**
+  - Update node to patch a critical vulnerability
+
 ## [v2.1.0] 2024-07-02
 
 ### BREAKING CHANGES
